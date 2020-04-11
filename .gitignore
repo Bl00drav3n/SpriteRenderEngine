@@ -36,5 +36,7 @@
 *.user
 *.pdb
 *.sdf
+*.opensdf
 *.suo
 rundir/data
+build/
