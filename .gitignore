@@ -30,3 +30,11 @@
 *.exe
 *.out
 *.app
+
+# Misc
+.clang
+*.user
+*.pdb
+*.sdf
+*.suo
+rundir/data
