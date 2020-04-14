@@ -40,3 +40,4 @@
 *.suo
 rundir/data
 build/
+ipch/

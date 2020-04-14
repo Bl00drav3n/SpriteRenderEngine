@@ -1,7 +1,7 @@
 #include "game_platform.h"
 #include "game_rng.h"
-#include "game_opengl.h"
 #include "game_renderer.h"
+#include "game_render_group.h"
 #include "game_particles.h"
 #include "game_isosurface.h"
 #include "game_text.h"
@@ -22,6 +22,7 @@ platform_api * Platform = 0;
 #include "spline.cpp"
 #include "game_render_group.cpp"
 #include "game_renderer.cpp"
+#include "game_renderer_opengl.cpp"
 #include "game_particles.cpp"
 #include "game_entity.cpp"
 #include "game_level.cpp"
@@ -556,11 +557,11 @@ internal game_state * InitializeGame(void *StackMemory, umm StackMemorySize)
 	return GameState;
 }
 
-internal void RenderGame(render_state *Renderer)
+internal void RenderGame(render_state *Renderer, render_group *GameRenderGroup)
 {
 	TIMED_FUNCTION();
 
-	DrawRenderGroup(Renderer, &Renderer->GameRenderGroup);
+	DrawRenderGroup(Renderer, GameRenderGroup);
 
 }
 
@@ -576,7 +577,7 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 	
 	if(DllReloaded) {
 		GlobalStack = (stack*)GameMemory->StackMemory;
-		ReloadOpenGL();
+		ReloadRenderBackend();
 		if(GlobalDebugState) {
 			DebugFreeAllFrames(GlobalDebugState);
 		}
@@ -692,11 +693,10 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 	}
 	
 	viewport Viewport = { 0, 0, Window->Width, Window->Height };
-    AllocateRenderGroups(Renderer);
-    render_group *GameRenderGroup = &Renderer->GameRenderGroup;
-	PushClear(GameRenderGroup, ClearColor);
-	PushBlend(GameRenderGroup, true);
-	PushTransformation(GameRenderGroup, Viewport, CreateViewProjection(V2(), State->Level.Camera.Bounds));
+    render_group GameRenderGroup = AllocateRenderGroup(Renderer->PerFrameMemory, MEGABYTES(32));;
+	PushClear(&GameRenderGroup, ClearColor);
+	PushBlend(&GameRenderGroup, true);
+	PushTransformation(&GameRenderGroup, Viewport, CreateViewProjection(V2(), State->Level.Camera.Bounds));
 	
 	camera *Camera = &State->Level.Camera;
 	Camera->P.Offset = Camera->P.Offset + Camera->Speed * TimeStep * V2(1.f, 0.f);
@@ -719,7 +719,7 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
 	f32 TimeDelta = TimeStep;
 	BeginSimRegion(State);
-	SimulationTick(State, GameRenderGroup, &State->SimRegion, Inputs, TimeDelta);
+	SimulationTick(State, &GameRenderGroup, &State->SimRegion, Inputs, TimeDelta);
 	// NOTE: Add player if reference lost
 	sim_entity *Player = GetSimEntityById(&State->SimRegion, State->PlayerRef);
 	if(!Player) {
@@ -737,12 +737,12 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 	for(u32 i = 0 ; i < State->Level.AllocatedBlockCount; i++) {
 		v2 LowerLeft = BlockDebug - BlockHalfDim;
 		v2 UpperRight = BlockDebug + BlockHalfDim;
-		PushRectangleOutline(GameRenderGroup, MakeRectFromCorners(LowerLeft, UpperRight), 1.f, LevelBlockOutlineColor);
+		PushRectangleOutline(&GameRenderGroup, MakeRectFromCorners(LowerLeft, UpperRight), 1.f, LevelBlockOutlineColor);
 
 		BlockDebug.x += State->Level.BlockDim.x;
 	}
 
-	DebugSpline(GameRenderGroup, &State->DebugSpline, 0.1f, 25);
+	DebugSpline(&GameRenderGroup, &State->DebugSpline, 0.1f, 25);
 
 	debug_point_buffer *PointBuffer = &State->DebugPointBuffer;
 	if(Inputs->State[BUTTON_MOUSE_LEFT] && Inputs->HalfTransitionCount[BUTTON_MOUSE_LEFT]) {
@@ -753,10 +753,10 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 	}
 
 	if(PointBuffer->Count >= 2) {
-		PushLines(GameRenderGroup, PointBuffer->Points, 2, 1.f, RenderEntryLinesMode_Smooth, V4(1.f, 1.f, 1.f, 1.f));
+		PushLines(&GameRenderGroup, PointBuffer->Points, 2, 1.f, RenderEntryLinesMode_Smooth, V4(1.f, 1.f, 1.f, 1.f));
 	}
 	if(PointBuffer->Count == 4) {
-		PushLines(GameRenderGroup, PointBuffer->Points + 2, 2, 1.f, RenderEntryLinesMode_Smooth, V4(1.f, 1.f, 1.f, 1.f));
+		PushLines(&GameRenderGroup, PointBuffer->Points + 2, 2, 1.f, RenderEntryLinesMode_Smooth, V4(1.f, 1.f, 1.f, 1.f));
 
 		f32 t, s;
 		ray2 RayA = Ray2FromPoints(PointBuffer->Points[0], PointBuffer->Points[1]);
@@ -764,13 +764,13 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 		if(RayIntersect2(RayA, RayB, &t, &s)) {
 			v2 Intersection = RayA.Start + t * RayA.Dir;
 			rect2 R = MakeRectDim(Intersection, V2(1.f, 1.f));
-			PushRectangle(GameRenderGroup, R, V4(1.f, 0.f, 0.f, 1.f));
+			PushRectangle(&GameRenderGroup, R, V4(1.f, 0.f, 0.f, 1.f));
 		}
 	}
 
 	//loadDialog(State);
 
-	RenderGame(Renderer);
+	RenderGame(Renderer, &GameRenderGroup);
 
 	if(!State->CurMusic || !State->CurMusic->Valid) {
 		PlayRandomMusic(State);

@@ -305,7 +305,7 @@ internal inline void DebugEndFrame()
 #define TIMED_BLOCK() TIMED_BLOCK_(__FILE__, __FUNCTION__, __LINE__)
 */
 
-#define TIMED_BLOCK(BlockName) debug_timed_block TimedBlock(BlockName, __FILE__, __LINE__, __FUNCTION__);
+#define TIMED_BLOCK(BlockName) debug_timed_block TimedBlock(BlockName, __FILE__, __LINE__, __FUNCTION__)
 #define TIMED_FUNCTION() TIMED_BLOCK(__FUNCTION__)
 
 #else

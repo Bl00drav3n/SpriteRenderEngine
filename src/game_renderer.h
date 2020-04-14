@@ -3,28 +3,7 @@
 
 #define MAX_NUM_SPRITE_VERTICES 8192
 
-enum vertex_attrib_id
-{
-    VertexAttrib_Position,
-    VertexAttrib_TexCoord,
-    VertexAttrib_SpriteOffset,
-    VertexAttrib_Tint,
-
-    VertexAttrib_Count
-};
-
-struct vertex_attrib
-{
-    vertex_attrib_id Id;
-    char *Name;
-};
-
-global_persist vertex_attrib GlobalVertexAttribs[] = {
-    { VertexAttrib_Position, "VertexPosition" },
-    { VertexAttrib_TexCoord, "VertexTexCoord" },
-    { VertexAttrib_SpriteOffset, "VertexSpriteOffset" },
-    { VertexAttrib_Tint, "VertexSpriteTint"},
-};
+struct render_group;
 
 struct texture
 {
@@ -125,13 +104,7 @@ struct spritemap_array
 struct sprite_program
 {
     u32 Id;
-    s32 ProjectionTransformLoc;
-    s32 SpriteHalfDimLoc;
-    s32 SpriteTexDimLoc;
-    s32 SpritemapsLoc;
 };
-
-#include "game_render_group.h"
 
 struct render_state
 {
@@ -143,8 +116,6 @@ struct render_state
 
     spritemap_array Spritemaps;
     sprite_program SpriteProgram;
-
-    render_group GameRenderGroup;
 };
 
 static inline f32 MapU8ToF32(u8 Value)
@@ -198,5 +169,12 @@ static inline v4 PremultiplyAlpha(v4 ColorIn)
 
     return Result;
 }
+
+internal void ReloadRenderBackend();
+internal texture * CreateTexture(render_state *State, u32 Width, u32 Height, u8 *Data);
+internal spritemap_array AllocateSpritemaps();
+internal void UpdateSpritemapSprite(spritemap_array *Spritemaps, u32 OffsetX, u32 OffsetY, u32 Index, sprite_pixel *Pixels);
+internal sprite_program CreateSpriteProgram(char *VS, char *GS, char *FS);
+internal void DrawRenderGroup(render_state *Renderer, render_group *Group);
 
 #endif

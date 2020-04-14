@@ -76,3 +76,42 @@ internal void cubic_interp(f32 *xa, f32 *ya, f32 *y2a, u32 n, f32 x, f32 *y)
 	f32 b = (x - xa[klo]) / h;
 	*y = a * ya[klo] + b * ya[khi] + ((a * a * a - a) * y2a[klo] + (b * b * b - b) * y2a[khi]) * (h * h) / 6.f;
 }
+
+internal inline void BakeParametricSpline(parametric_spline *S)
+{
+	if(S->Count > 1) {
+		build_spline(S->t, S->x, S->x2, S->Count);
+		build_spline(S->t, S->y, S->y2, S->Count);
+	}
+}
+
+internal inline v2 SplineAtTime(parametric_spline *S, f32 t)
+{
+	v2 Result;
+	t = Clamp(t, 0.f, (f32)S->Count);
+	cubic_interp(S->t, S->x, S->x2, S->Count, t, &Result.x);
+	cubic_interp(S->t, S->y, S->y2, S->Count, t, &Result.y);
+
+	return Result;
+}
+
+internal void PushSplinePoint(parametric_spline *S, v2 P)
+{
+	if(S->Count < MAX_SPLINE_CTRL_PTS) {
+		S->t[S->Count] = (f32)S->Count;
+		S->x[S->Count] = P.x;
+		S->y[S->Count] = P.y;
+		S->Count++;
+		BakeParametricSpline(S);
+	}
+}
+
+internal void PopSplinePoint(parametric_spline *S)
+{
+	if(S->Count) {
+		S->Count--;
+		if(S->Count > 0) {
+			BakeParametricSpline(S);
+		}
+	}
+}
