@@ -16,7 +16,7 @@ global_persist mem_arena STBI_GlobalMemory;
 #define STBI_NO_STDIO
 #include "stb_image.h"
 
-platform_api * Platform = 0;
+global_persist platform_api * Platform = 0;
 
 #include "game_memory_stack.cpp"
 #include "spline.cpp"
