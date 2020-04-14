@@ -171,3 +171,20 @@ sprite CreateSprite(s32 SpritePosX, s32 SpritePosY, s32 SpritemapIndex)
 
 	return Result;
 }
+
+void LoadShaderSources(mem_arena *Memory, char *ShaderSourceNames[3], char *ShaderSources[3]) {
+	for(u32 i = 0; i < 3; i++) {
+		ShaderSources[i] = 0;
+		if(ShaderSourceNames[i]) {
+			file_info File = Platform->OpenFile(ShaderSourceNames[i], FileType_Shader);
+			if(File.Valid) {
+				void *Data = PushSize(Memory, File.Size + 1);
+				if(Data && Platform->ReadEntireFile(&File, Data)) {
+					((char*)Data)[File.Size] = 0;
+					ShaderSources[i] = (char*)Data;
+				}
+			}
+			Platform->CloseFile(&File);
+		}
+	}
+}

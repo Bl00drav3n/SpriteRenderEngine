@@ -44,6 +44,7 @@ enum render_entry_lines_mode
 };
 struct render_entry_lines
 {
+	f32 Width;
 	v4 Color;
 	render_entry_lines_mode Mode;
 	u32 VertexCount;

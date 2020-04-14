@@ -15,6 +15,7 @@
 #define InvalidDefaultCase (void)(0)
 #define NotImplemented (void)(0)
 #endif
+#define NeedsCode(msg) static_assert(false, "TODO: " ## msg)
 
 #define KILOBYTES(x) (1024L * x)
 #define MEGABYTES(x) (1024L * KILOBYTES(x))

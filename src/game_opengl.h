@@ -285,7 +285,13 @@ GL_MACRO(glGetProgramInfoLog, void, GLuint program, GLsizei maxLength, GLsizei *
 GL_MACRO(glFlush, void, void);
 GL_MACRO(glFinish, void, void);
 GL_MACRO(glUniform1i, void, GLint location, GLint v0);
+GL_MACRO(glUniform1f, void, GLint location, GLfloat v0);
+GL_MACRO(glUniform2f, void, GLint location, GLfloat v0, GLfloat v1);
+GL_MACRO(glUniform3f, void, GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
+GL_MACRO(glUniform4f, void, GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
 GL_MACRO(glUniform2fv, void, GLint location, GLsizei count, const GLfloat *value);
+GL_MACRO(glUniform3fv, void, GLint location, GLsizei count, const GLfloat *value);
+GL_MACRO(glUniform4fv, void, GLint location, GLsizei count, const GLfloat *value);
 GL_MACRO(glUniformMatrix4fv, void, GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
 GL_MACRO(glBindFragDataLocation, void, GLuint program, GLuint colorNumber, const char * name);
 GL_MACRO(glDrawBuffers, void, GLsizei n, const GLenum *bufs);

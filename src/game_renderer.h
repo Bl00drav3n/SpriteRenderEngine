@@ -106,6 +106,11 @@ struct sprite_program
     u32 Id;
 };
 
+struct line_program
+{
+	u32 Id;
+};
+
 struct render_state
 {
 	mem_arena   Memory;
@@ -116,6 +121,7 @@ struct render_state
 
     spritemap_array Spritemaps;
     sprite_program SpriteProgram;
+	line_program LineProgram;
 };
 
 static inline f32 MapU8ToF32(u8 Value)
@@ -174,7 +180,7 @@ internal void ReloadRenderBackend();
 internal texture * CreateTexture(render_state *State, u32 Width, u32 Height, u8 *Data);
 internal spritemap_array AllocateSpritemaps();
 internal void UpdateSpritemapSprite(spritemap_array *Spritemaps, u32 OffsetX, u32 OffsetY, u32 Index, sprite_pixel *Pixels);
-internal sprite_program CreateSpriteProgram(char *VS, char *GS, char *FS);
+internal sprite_program CreateSpriteProgram(mem_arena *Memory);
 internal void DrawRenderGroup(render_state *Renderer, render_group *Group);
 
 #endif

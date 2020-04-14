@@ -653,21 +653,10 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         spritemap_array Spritemaps = AllocateTestSpritemaps();
 #endif
 		
-		// Load sprite shader program
-		char *SpriteShaderSourceNames[3] = { "sprite_vertex", "sprite_geometry", "sprite_fragment" };
-		char *SpriteShaderSources[3] = {};
-		for(u32 i = 0; i < 3; i++) {
-			file_info File = Platform->OpenFile(SpriteShaderSourceNames[i], FileType_Shader);
-			if(File.Valid) {
-				void *Data = PushSize(&State->Renderer.Memory, File.Size);
-				if(Data && Platform->ReadEntireFile(&File, Data)) {
-					SpriteShaderSources[i] = (char*)Data;
-				}
-			}
-			Platform->CloseFile(&File);
-		}
-        State->Renderer.SpriteProgram = CreateSpriteProgram(SpriteShaderSources[0], SpriteShaderSources[1], SpriteShaderSources[2]);
+        State->Renderer.SpriteProgram = CreateSpriteProgram(&State->Renderer.Memory);
         State->Renderer.Spritemaps = Spritemaps;
+
+		State->Renderer.LineProgram = CreateLineProgram(&State->Renderer.Memory);
 
 		InitializeParticleCache(State->ParticleCache);
 		

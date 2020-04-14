@@ -157,11 +157,10 @@ internal void BindGlobalVertexAttributes(GLuint Program) {
     }
 }
 
-internal GLuint CreateShaderProgram(char *SrcVS, char *SrcGS, char *SrcFS)
+internal GLuint CreateShaderProgram(char *Sources[3])
 {
     GLuint Program = glCreateProgram();
 
-    char *Sources[3] = { SrcVS, SrcGS, SrcFS };
     GLenum Types[3] = { GL_VERTEX_SHADER, GL_GEOMETRY_SHADER, GL_FRAGMENT_SHADER };
     for (u32 i = 0; i < 3; i++) {
         char *Src = Sources[i];
@@ -194,11 +193,29 @@ internal GLuint CreateShaderProgram(char *SrcVS, char *SrcGS, char *SrcFS)
     return Program;
 }
 
-internal sprite_program CreateSpriteProgram(char *VS, char *GS, char *FS)
+internal GLuint LoadProgram(mem_arena *Memory, char *ShaderSourceNames[3]) {
+	char *ShaderSources[3];
+	temporary_memory TempMem = BeginTempMemory(Memory);
+	LoadShaderSources(Memory, ShaderSourceNames, ShaderSources);
+	u32 Result = CreateShaderProgram(ShaderSources);
+	EndTempMemory(&TempMem);
+	return Result;
+}
+
+internal sprite_program CreateSpriteProgram(mem_arena *Memory)
 {
-    sprite_program Result;
-    u32 Program = CreateShaderProgram(VS, GS, FS);
-    Result.Id = Program;
+	sprite_program Result;
+	char *ShaderSourceNames[3] = { "sprite_vertex", "sprite_geometry", "sprite_fragment" };
+    Result.Id = LoadProgram(Memory, ShaderSourceNames);
+
+    return Result;
+}
+
+internal line_program CreateLineProgram(mem_arena *Memory)
+{    
+	line_program Result;
+	char *ShaderSourceNames[3] = { "line_vertex", "line_geometry", "line_fragment" };
+    Result.Id = LoadProgram(Memory, ShaderSourceNames);
 
     return Result;
 }
@@ -265,11 +282,11 @@ internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
 
 			BEGIN_CASE(render_entry_lines)
 			{
-#if 1
 				TIMED_BLOCK("render_entry_lines");
                 // TODO: NOOOOOOOOOOOPE
 				f32 *PositionBase = (f32*)(Entry + 1);
 				Offset += sizeof(v2) * Entry->VertexCount;
+#if 0
 
                 // TODO: We are doing a little dance here to make compatibility mode work, remove asap
                 // TODO: Holy shit yes please
@@ -295,6 +312,35 @@ internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
 				glEnable(GL_TEXTURE_2D);
                 glBindVertexArray(VertexArray);
                 SpriteVertices = (spritemap_vertex*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+#else
+				GLuint line_vao;
+				glGenVertexArrays(1, &line_vao);
+				glBindVertexArray(line_vao);
+
+				GLuint line_vbo;
+				glGenBuffers(1, &line_vbo);
+				glBindBuffer(GL_ARRAY_BUFFER, line_vbo);
+				glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(f32) * Entry->VertexCount, PositionBase, GL_STATIC_DRAW);
+
+				GLuint pos_id = GlobalVertexAttribs[VertexAttrib_Position].Id;
+				glVertexAttribPointer(pos_id, 2, GL_FLOAT, GL_FALSE, 0, 0);
+				glEnableVertexAttribArray(pos_id);
+				
+				GLuint LineProg = Renderer->LineProgram.Id;
+				glUseProgram(LineProg);
+
+				GLint ProjectionTransformLoc = glGetUniformLocation(LineProg, "ProjectionTransform");
+				GLint LineWidthLoc = glGetUniformLocation(LineProg, "LineWidth");
+				GLint LineColorLoc = glGetUniformLocation(LineProg, "LineColor");
+				glUniformMatrix4fv(ProjectionTransformLoc, 1, GL_FALSE, ProjectionTransform.ptr);
+				glUniform1f(LineWidthLoc, 1.f);
+				glUniform4fv(LineColorLoc, 1, Entry->Color.E);
+
+				glDrawArrays(GL_LINE_STRIP, 0, Entry->VertexCount);
+				glDisableVertexAttribArray(pos_id);
+				glUseProgram(0);
+				glBindVertexArray(0);
+
 #endif
 			} END_CASE_AND_BREAK;
 			
@@ -383,6 +429,7 @@ internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
 #undef END_CASE_AND_BREAK
 
     glBindVertexArray(VertexArray);
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer);
     glUnmapBuffer(GL_ARRAY_BUFFER);
 
 	{

@@ -145,52 +145,13 @@ internal void PushLines(render_group *Group, v2 *Points, u32 Count, f32 Width, r
 
 	render_entry_lines *Entry = PushRenderEntry(Group, render_entry_lines);
 	if(Entry) {
-		f32 HalfWidth = 0.5f * Width;
-		u32 VertexCount;
-		switch(Mode) {
-			case RenderEntryLinesMode_Simple:
-			{
-				VertexCount = Count;
-				u32 Size = sizeof(v2) * VertexCount;
-				v2 *Positions = (v2*)PushRenderEntryData_(Group, Size);
-				CopyMemory(Positions, Points, Size);
-			} break;
-			case RenderEntryLinesMode_Smooth:
-			{
-				VertexCount = 2 * Count;
-				v2 *PositionBase = (v2*)PushRenderEntryData_(Group, sizeof(v2) * VertexCount);
-				if(PositionBase) {
-					v2 *Position = PositionBase;
-					v2 Normal, LastDir, NextDir;
-					LastDir = Normalize(Points[1] - Points[0]);
-					Normal = Perp(LastDir);
-					*Position++ = Points[0] + HalfWidth * Normal;
-					*Position++ = Points[0] - HalfWidth * Normal;
-					for(u32 i = 1; i < Count - 1; i++) {
-						v2 P = Points[i];
-						v2 Q = Points[i + 1];
-						NextDir = Normalize(Q - P);
-						v2 Tangent = Normalize(LastDir + NextDir);
-						v2 Miter = Perp(Tangent);
-						f32 MiterLength = HalfWidth / Dot(Miter, Normal);
-						Miter *= MiterLength;
-		
-						*Position++ = P + Miter;
-						*Position++ = P - Miter;
-
-						LastDir = NextDir;
-						Normal = Perp(LastDir);
-					}
-					*Position++ = Points[Count - 1] + HalfWidth * Normal;
-					*Position++ = Points[Count - 1] - HalfWidth * Normal;
-				}
-			} break;
-
-			InvalidDefaultCase;
-		}
-
+		Entry->VertexCount = Count;
+		Entry->Width = Width;
 		Entry->Color = Color;
 		Entry->Mode = Mode;
-		Entry->VertexCount = VertexCount;
+
+		u32 Size = sizeof(*Points) * Count;
+		v2 *Positions = (v2*)PushRenderEntryData_(Group, Size);
+		CopyMemory(Positions, Points, Size);
 	}
 }
