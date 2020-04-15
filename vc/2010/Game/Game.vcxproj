@@ -105,7 +105,7 @@
     </Link>
     <PostBuildEvent>
       <Command>xcopy $(TargetDir)$(TargetName)$(TargetExt) $(SolutionDir)..\..\rundir\ /Y /D /Q
-xcopy $(SolutionDir)..\..\src\shaders $(SolutionDir)..\..\rundir\data /Y /D /Q</Command>
+xcopy $(SolutionDir)..\..\src\shaders $(SolutionDir)..\..\rundir\data\shaders /Y /D /Q</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -149,7 +149,8 @@ xcopy $(SolutionDir)..\..\src\shaders $(SolutionDir)..\..\rundir\data /Y /D /Q</
       <AdditionalDependencies>libcmt.lib;opengl32.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>xcopy $(TargetDir)$(TargetName)$(TargetExt) $(SolutionDir)..\..\rundir\ /Y /D</Command>
+      <Command>xcopy $(TargetDir)$(TargetName)$(TargetExt) $(SolutionDir)..\..\rundir\ /Y /D /Q
+xcopy $(SolutionDir)..\..\src\shaders $(SolutionDir)..\..\rundir\data\shaders /Y /D /Q</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -273,6 +274,14 @@ xcopy $(SolutionDir)..\..\src\shaders $(SolutionDir)..\..\rundir\data /Y /D /Q</
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\src\shaders\line_fragment.glsl" />
+    <None Include="..\..\..\src\shaders\line_geometry.glsl" />
+    <None Include="..\..\..\src\shaders\line_vertex.glsl" />
+    <None Include="..\..\..\src\shaders\sprite_fragment.glsl" />
+    <None Include="..\..\..\src\shaders\sprite_geometry.glsl" />
+    <None Include="..\..\..\src\shaders\sprite_vertex.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

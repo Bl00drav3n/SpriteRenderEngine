@@ -20,7 +20,7 @@ global_persist vertex_attrib GlobalVertexAttribs[] = {
     { VertexAttrib_Position, "VertexPosition" },
     { VertexAttrib_TexCoord, "VertexTexCoord" },
     { VertexAttrib_SpriteOffset, "VertexSpriteOffset" },
-    { VertexAttrib_Tint, "VertexSpriteTint"},
+    { VertexAttrib_Tint, "VertexTint" },
 };
 
 void ReloadRenderBackend()
