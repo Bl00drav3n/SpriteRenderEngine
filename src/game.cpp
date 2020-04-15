@@ -652,11 +652,11 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 #else
         spritemap_array Spritemaps = AllocateTestSpritemaps();
 #endif
+		State->Renderer.BasicProgram = CreateBasicProgram(&State->Renderer.Memory);
+		State->Renderer.LineProgram = CreateLineProgram(&State->Renderer.Memory);
 		
         State->Renderer.SpriteProgram = CreateSpriteProgram(&State->Renderer.Memory);
         State->Renderer.Spritemaps = Spritemaps;
-
-		State->Renderer.LineProgram = CreateLineProgram(&State->Renderer.Memory);
 
 		InitializeParticleCache(State->ParticleCache);
 		

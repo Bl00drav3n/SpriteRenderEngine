@@ -276,6 +276,8 @@ xcopy $(SolutionDir)..\..\src\shaders $(SolutionDir)..\..\rundir\data\shaders /Y
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\..\src\shaders\basic_fragment.glsl" />
+    <None Include="..\..\..\src\shaders\basic_vertex.glsl" />
     <None Include="..\..\..\src\shaders\line_fragment.glsl" />
     <None Include="..\..\..\src\shaders\line_geometry.glsl" />
     <None Include="..\..\..\src\shaders\line_vertex.glsl" />

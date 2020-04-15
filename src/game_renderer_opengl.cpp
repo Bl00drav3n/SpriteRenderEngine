@@ -202,10 +202,10 @@ internal GLuint LoadProgram(mem_arena *Memory, char *ShaderSourceNames[3]) {
 	return Result;
 }
 
-internal sprite_program CreateSpriteProgram(mem_arena *Memory)
-{
-	sprite_program Result;
-	char *ShaderSourceNames[3] = { "sprite_vertex", "sprite_geometry", "sprite_fragment" };
+internal basic_program CreateBasicProgram(mem_arena *Memory)
+{    
+	basic_program Result;
+	char *ShaderSourceNames[3] = { "basic_vertex", 0, "basic_fragment" };
     Result.Id = LoadProgram(Memory, ShaderSourceNames);
 
     return Result;
@@ -220,228 +220,254 @@ internal line_program CreateLineProgram(mem_arena *Memory)
     return Result;
 }
 
+internal sprite_program CreateSpriteProgram(mem_arena *Memory)
+{
+	sprite_program Result;
+	char *ShaderSourceNames[3] = { "sprite_vertex", "sprite_geometry", "sprite_fragment" };
+    Result.Id = LoadProgram(Memory, ShaderSourceNames);
+
+    return Result;
+}
+
 internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
 {
-    TIMED_FUNCTION();
-
-    SetDefaultGLState();
-
+    // TODO: We always use the last PushTransform call
+	// NOTE: This depends on the command right now.
+    mat4 ProjectionTransform = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
     u32 SpriteVertexCount = 0;
     spritemap_vertex *SpriteVertices = 0;
-    // TODO: Create some persistant state for buffers etc. and only allocate/initialize once
-    // TODO: This is old crap omg
-    GLuint VertexArray;
-    glGenVertexArrays(1, &VertexArray);
-    glBindVertexArray(VertexArray);
+	GLuint VertexArray;
+	GLuint VertexBuffer;
+	GLuint BasicVertexArray;
+	GLuint BasicVertexBuffer;
 
-    GLuint VertexBuffer;
-    glGenBuffers(1, &VertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, MAX_NUM_SPRITE_VERTICES * sizeof(spritemap_vertex), 0, GL_STATIC_DRAW);
-    SpriteVertices = (spritemap_vertex*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+    TIMED_FUNCTION();
+	{ TIMED_BLOCK("Setup");
 
-    glBindVertexArray(0);
+		SetDefaultGLState();
 
-    // TODO: We always use the last PushTransform call
-    // TODO: What the fuck is this todo saying???
-    mat4 ProjectionTransform = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
-	for(u32 Offset = 0;
-		Offset < Group->BufferSize;
-		)
-	{
-		render_group_entry_header *Header = (render_group_entry_header*)(Group->BufferBase + Offset);
+		// TODO: Create some persistant state for buffers etc. and only allocate/initialize once
+		// TODO: This is old crap omg
+		glGenVertexArrays(1, &VertexArray);
+		glBindVertexArray(VertexArray);
+
+		glGenBuffers(1, &VertexBuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer);
+		glBufferData(GL_ARRAY_BUFFER, MAX_NUM_SPRITE_VERTICES * sizeof(spritemap_vertex), 0, GL_STATIC_DRAW);
+	
+		glVertexAttribPointer(VertexAttrib_Position, 2, GL_FLOAT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Position));
+		glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Position].Id);
+	
+		glVertexAttribPointer(VertexAttrib_SpriteOffset, 3, GL_INT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Offset));
+		glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_SpriteOffset].Id);
+	
+		glVertexAttribPointer(VertexAttrib_Tint, 4, GL_FLOAT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Tint));
+		glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Tint].Id);
+
+		SpriteVertices = (spritemap_vertex*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+
+		glGenVertexArrays(1, &BasicVertexArray);
+		glBindVertexArray(BasicVertexArray);
+		
+		glGenBuffers(1, &BasicVertexBuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, BasicVertexBuffer);
+		glBufferData(GL_ARRAY_BUFFER, MAX_NUM_BASIC_VERTICES * sizeof(basic_vertex), 0, GL_STATIC_DRAW);
+
+		glVertexAttribPointer(VertexAttrib_Position, 2, GL_FLOAT, GL_FALSE, sizeof(basic_vertex), (void*)offsetof(basic_vertex, Position));
+		glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Position].Id);
+
+		glVertexAttribPointer(VertexAttrib_TexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(basic_vertex), (void*)offsetof(basic_vertex, TexCoord));
+		glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_TexCoord].Id);
+
+		glVertexAttribPointer(VertexAttrib_Tint, 4, GL_FLOAT, GL_FALSE, sizeof(basic_vertex), (void*)offsetof(basic_vertex, Tint));
+		glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Tint].Id);
+	
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
+	}
+
+	{ TIMED_BLOCK("Execute command buffer");
+		for(u32 Offset = 0;
+			Offset < Group->BufferSize;
+			)
+		{
+			render_group_entry_header *Header = (render_group_entry_header*)(Group->BufferBase + Offset);
 #define BEGIN_CASE(type) case RenderGroupEntryType_##type: { type *Entry = (type*)(Header + 1);
 #define END_CASE_AND_BREAK Offset += sizeof(render_group_entry_header) + sizeof(*Entry); } break;
-		switch(Header->Type) {
-			BEGIN_CASE(render_entry_sprite)
-			{
-				TIMED_BLOCK("render_entry_sprite");
-                if (SpriteVertexCount < MAX_NUM_SPRITE_VERTICES) {
-                    spritemap_vertex *Vertex = SpriteVertices + SpriteVertexCount++;
-                    Vertex->Position = Entry->Center;
-                    Vertex->Offset = Entry->Offset;
-                    // TODO: Premultiply alpha here or in shader?
-                    Vertex->Tint = PremultiplyAlpha(Entry->TintColor);
-                }
-			} END_CASE_AND_BREAK;
+			switch(Header->Type) {
+				BEGIN_CASE(render_entry_sprite)
+				{
+					if (SpriteVertexCount < MAX_NUM_SPRITE_VERTICES) {
+						spritemap_vertex *Vertex = SpriteVertices + SpriteVertexCount++;
+						Vertex->Position = Entry->Center;
+						Vertex->Offset = Entry->Offset;
+						// TODO: Premultiply alpha here or in shader?
+						Vertex->Tint = PremultiplyAlpha(Entry->TintColor);
+					}
+				} END_CASE_AND_BREAK;
 
-			BEGIN_CASE(render_entry_glyph)
-			{
+				BEGIN_CASE(render_entry_glyph)
+				{
 #if 1
-				TIMED_BLOCK("render_entry_glyph");
-                // TODO: God help me
-				glBindTexture(GL_TEXTURE_2D, Entry->TextureHandle);
-				glBegin(GL_TRIANGLE_STRIP);
-				for(u32 i = 0; i < 4; i++) {
-					glTexCoord2fv(Entry->Corners[i].TexCoord.E);
-					glVertex2fv(Entry->Corners[i].Position.E);
-				}
-				glEnd();
+					// TODO: God help me
+					glBindTexture(GL_TEXTURE_2D, Entry->TextureHandle);
+					glBegin(GL_TRIANGLE_STRIP);
+					for(u32 i = 0; i < 4; i++) {
+						glTexCoord2fv(Entry->Corners[i].TexCoord.E);
+						glVertex2fv(Entry->Corners[i].Position.E);
+					}
+					glEnd();
 #endif
-			} END_CASE_AND_BREAK;
+				} END_CASE_AND_BREAK;
 
-			BEGIN_CASE(render_entry_lines)
-			{
-				TIMED_BLOCK("render_entry_lines");
-                // TODO: NOOOOOOOOOOOPE
-				f32 *PositionBase = (f32*)(Entry + 1);
-				Offset += sizeof(v2) * Entry->VertexCount;
-#if 0
+				BEGIN_CASE(render_entry_lines)
+				{
+					// TODO: NOOOOOOOOOOOPE
+					f32 *PositionBase = (f32*)(Entry + 1);
+					Offset += sizeof(v2) * Entry->VertexCount;
 
-                // TODO: We are doing a little dance here to make compatibility mode work, remove asap
-                // TODO: Holy shit yes please
-                glUnmapBuffer(GL_ARRAY_BUFFER);
-                glBindVertexArray(0);
-				glDisable(GL_TEXTURE_2D);
-				glEnableClientState(GL_VERTEX_ARRAY);
-				glVertexPointer(2, GL_FLOAT, 0, PositionBase);
-				glColor4fv(Entry->Color.E);
-				switch(Entry->Mode) {
-					case RenderEntryLinesMode_Simple:
-					{
-						glDrawArrays(GL_LINE_STRIP, 0, Entry->VertexCount);
-					} break;
-					case RenderEntryLinesMode_Smooth:
-					{
-						glDrawArrays(GL_TRIANGLE_STRIP, 0, Entry->VertexCount);
-					} break;
+					GLuint line_vao;
+					glGenVertexArrays(1, &line_vao);
+					glBindVertexArray(line_vao);
 
-					InvalidDefaultCase;
-				}
-				glDisableClientState(GL_VERTEX_ARRAY);
-				glEnable(GL_TEXTURE_2D);
-                glBindVertexArray(VertexArray);
-                SpriteVertices = (spritemap_vertex*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-#else
-				GLuint line_vao;
-				glGenVertexArrays(1, &line_vao);
-				glBindVertexArray(line_vao);
+					GLuint line_vbo;
+					glGenBuffers(1, &line_vbo);
+					glBindBuffer(GL_ARRAY_BUFFER, line_vbo);
+					glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(f32) * Entry->VertexCount, PositionBase, GL_STATIC_DRAW);
 
-				GLuint line_vbo;
-				glGenBuffers(1, &line_vbo);
-				glBindBuffer(GL_ARRAY_BUFFER, line_vbo);
-				glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(f32) * Entry->VertexCount, PositionBase, GL_STATIC_DRAW);
-
-				GLuint pos_id = GlobalVertexAttribs[VertexAttrib_Position].Id;
-				glVertexAttribPointer(pos_id, 2, GL_FLOAT, GL_FALSE, 0, 0);
-				glEnableVertexAttribArray(pos_id);
+					GLuint pos_id = GlobalVertexAttribs[VertexAttrib_Position].Id;
+					glVertexAttribPointer(pos_id, 2, GL_FLOAT, GL_FALSE, 0, 0);
+					glEnableVertexAttribArray(pos_id);
 				
-				GLuint LineProg = Renderer->LineProgram.Id;
-				glUseProgram(LineProg);
+					GLuint LineProg = Renderer->LineProgram.Id;
+					glUseProgram(LineProg);
 
-				GLint ProjectionTransformLoc = glGetUniformLocation(LineProg, "ProjectionTransform");
-				GLint LineWidthLoc = glGetUniformLocation(LineProg, "LineWidth");
-				GLint LineColorLoc = glGetUniformLocation(LineProg, "LineColor");
-				glUniformMatrix4fv(ProjectionTransformLoc, 1, GL_FALSE, ProjectionTransform.ptr);
-				glUniform1f(LineWidthLoc, 1.f);
-				glUniform4fv(LineColorLoc, 1, Entry->Color.E);
+					GLint ProjectionTransformLoc = glGetUniformLocation(LineProg, "ProjectionTransform");
+					GLint LineWidthLoc = glGetUniformLocation(LineProg, "LineWidth");
+					GLint LineColorLoc = glGetUniformLocation(LineProg, "LineColor");
+					glUniformMatrix4fv(ProjectionTransformLoc, 1, GL_FALSE, ProjectionTransform.ptr);
+					glUniform1f(LineWidthLoc, 1.f);
+					glUniform4fv(LineColorLoc, 1, Entry->Color.E);
 
-				glDrawArrays(GL_LINE_STRIP, 0, Entry->VertexCount);
-				glDisableVertexAttribArray(pos_id);
-				glUseProgram(0);
-				glBindVertexArray(0);
+					glDrawArrays(GL_LINE_STRIP, 0, Entry->VertexCount);
 
-#endif
-			} END_CASE_AND_BREAK;
+					glDisableVertexAttribArray(pos_id);
+					glUseProgram(0);
+					glBindVertexArray(0);
+					glBindBuffer(GL_ARRAY_BUFFER, 0);
+					glDeleteBuffers(1, &line_vbo);
+					glDeleteVertexArrays(1, &line_vao);
+				} END_CASE_AND_BREAK;
 			
-			BEGIN_CASE(render_entry_rect)
-			{
-#if 1
-                // TODO: NOPE
-				TIMED_BLOCK("render_entry_rect");
-				glDisable(GL_TEXTURE_2D);
-				glColor4fv(Entry->Color.E);
-				glBegin(GL_TRIANGLE_STRIP);
-				for(u32 i = 0; i < 4; i++) {
-					glVertex2fv(Entry->Corners[i].Position.E);
-				}
-				glEnd();
-				SetDefaultGLState();
-#endif
-			} END_CASE_AND_BREAK;
-			
-			BEGIN_CASE(render_entry_rect_outline)
-			{
-#if 1
-                // TODO: NOPE
-				TIMED_BLOCK("render_entry_rect_outline");
-				glDisable(GL_TEXTURE_2D);
-				glColor4fv(Entry->Color.E);
-				glBegin(GL_TRIANGLE_STRIP);
-				glVertex2fv(Entry->OuterCorners[0].Position.E);
-				glVertex2fv(Entry->InnerCorners[0].Position.E);
-				glVertex2fv(Entry->OuterCorners[1].Position.E);
-				glVertex2fv(Entry->InnerCorners[1].Position.E);
-				glVertex2fv(Entry->OuterCorners[2].Position.E);
-				glVertex2fv(Entry->InnerCorners[2].Position.E);
-				glVertex2fv(Entry->OuterCorners[3].Position.E);
-				glVertex2fv(Entry->InnerCorners[3].Position.E);
-				glVertex2fv(Entry->OuterCorners[0].Position.E);
-				glVertex2fv(Entry->InnerCorners[0].Position.E);
-				glEnd();
-				SetDefaultGLState();
-#endif
-			} END_CASE_AND_BREAK;
+				BEGIN_CASE(render_entry_rect)
+				{
+					basic_vertex Vertices[4];
+					v2 TexCoord[4] = {
+						0, 0,
+						1, 0,
+						0, 1,
+						0, 1
+					};
+					for(u32 i = 0; i < 4; i++) {
+						Vertices[i].Position = Entry->Corners[i].Position;
+						Vertices[i].TexCoord = TexCoord[i];
+						Vertices[i].Tint = Entry->Color;
+					}
+					
+					glBindVertexArray(BasicVertexArray);
+					glBindBuffer(GL_ARRAY_BUFFER, BasicVertexBuffer);
+					glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Vertices), Vertices);
 
-			BEGIN_CASE(render_entry_clear)
-			{
-				TIMED_BLOCK("render_entry_clear");
-				glClearColor(Entry->ClearColor.r, Entry->ClearColor.g, Entry->ClearColor.b, Entry->ClearColor.a);
-				glClear(GL_COLOR_BUFFER_BIT);
-			} END_CASE_AND_BREAK;
-			
-			BEGIN_CASE(render_entry_transformation)
-			{
-				TIMED_BLOCK("render_entry_transformation");
-                // TODO: Load uniforms
-                // TODO: Facepalm
-#if 1
-				glMatrixMode(GL_MODELVIEW);
-				glLoadIdentity();
+					glUseProgram(Renderer->BasicProgram.Id);
 
-				glMatrixMode(GL_PROJECTION);
-				glLoadIdentity();
-				glViewport(Entry->Viewport.X, Entry->Viewport.Y, Entry->Viewport.Width, Entry->Viewport.Height);
-				glLoadMatrixf(Entry->Projection.ptr);
-#endif
-
-                ProjectionTransform = Entry->Projection;
-			} END_CASE_AND_BREAK;
-
-			BEGIN_CASE(render_entry_blend)
-			{
+					// TODO: Cache locations
+					GLint ProjectionTransformLoc = glGetUniformLocation(Renderer->BasicProgram.Id, "ProjectionTransform");
+					glUniformMatrix4fv(ProjectionTransformLoc, 1, GL_FALSE, ProjectionTransform.ptr);
 				
-				TIMED_BLOCK("render_entry_blend");
-				// NOTE: We are always using premultiplied alpha
-				// DstColor = SrcColor + DstColor * (1 - SrcAlpha)
-				if(Entry->BlendEnabled) {
-					glEnable(GL_BLEND);
-				}
-				else {
-					glDisable(GL_BLEND);
-				}
-			} END_CASE_AND_BREAK;
+					// TODO: Load a white 1x1 texture OR remove texturing from basic shader!
+					GLint TexLoc = glGetUniformLocation(Renderer->BasicProgram.Id, "Tex");
+					GLint TexUnit = 1;
+					glUniform1i(TexLoc, TexUnit);
 
-			InvalidDefaultCase;
+					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+					glBindVertexArray(0);
+					glBindBuffer(GL_ARRAY_BUFFER, 0);
+					glUseProgram(0);
+				} END_CASE_AND_BREAK;
+			
+				BEGIN_CASE(render_entry_rect_outline)
+				{
+#if 1
+					// TODO: NOPE
+					glDisable(GL_TEXTURE_2D);
+					glColor4fv(Entry->Color.E);
+					glBegin(GL_TRIANGLE_STRIP);
+					glVertex2fv(Entry->OuterCorners[0].Position.E);
+					glVertex2fv(Entry->InnerCorners[0].Position.E);
+					glVertex2fv(Entry->OuterCorners[1].Position.E);
+					glVertex2fv(Entry->InnerCorners[1].Position.E);
+					glVertex2fv(Entry->OuterCorners[2].Position.E);
+					glVertex2fv(Entry->InnerCorners[2].Position.E);
+					glVertex2fv(Entry->OuterCorners[3].Position.E);
+					glVertex2fv(Entry->InnerCorners[3].Position.E);
+					glVertex2fv(Entry->OuterCorners[0].Position.E);
+					glVertex2fv(Entry->InnerCorners[0].Position.E);
+					glEnd();
+					SetDefaultGLState();
+#endif
+				} END_CASE_AND_BREAK;
+
+				BEGIN_CASE(render_entry_clear)
+				{
+					glClearColor(Entry->ClearColor.r, Entry->ClearColor.g, Entry->ClearColor.b, Entry->ClearColor.a);
+					glClear(GL_COLOR_BUFFER_BIT);
+				} END_CASE_AND_BREAK;
+			
+				BEGIN_CASE(render_entry_transformation)
+				{
+					// TODO: Load uniforms
+					// TODO: Facepalm
+#if 1
+					glMatrixMode(GL_MODELVIEW);
+					glLoadIdentity();
+
+					glMatrixMode(GL_PROJECTION);
+					glLoadIdentity();
+					glViewport(Entry->Viewport.X, Entry->Viewport.Y, Entry->Viewport.Width, Entry->Viewport.Height);
+					glLoadMatrixf(Entry->Projection.ptr);
+#endif
+					ProjectionTransform = Entry->Projection;
+
+				} END_CASE_AND_BREAK;
+
+				BEGIN_CASE(render_entry_blend)
+				{
+					// NOTE: We are always using premultiplied alpha
+					// DstColor = SrcColor + DstColor * (1 - SrcAlpha)
+					if(Entry->BlendEnabled) {
+						glEnable(GL_BLEND);
+					}
+					else {
+						glDisable(GL_BLEND);
+					}
+				} END_CASE_AND_BREAK;
+
+				InvalidDefaultCase;
+			}
 		}
-	}
 #undef BEGIN_CASE
 #undef END_CASE_AND_BREAK
+	} // TIMED_BLOCK
 
-    glBindVertexArray(VertexArray);
-	glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer);
-    glUnmapBuffer(GL_ARRAY_BUFFER);
-
-	{
-		TIMED_BLOCK("Draw Sprites");
-		glVertexAttribPointer(VertexAttrib_Position, 2, GL_FLOAT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Position));
-		glVertexAttribPointer(VertexAttrib_SpriteOffset, 3, GL_INT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Offset));
-		glVertexAttribPointer(VertexAttrib_Tint, 4, GL_FLOAT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Tint));
-
-		for (u32 i = 0; i < ArrayCount(GlobalVertexAttribs); i++) {
-			vertex_attrib *Attrib = GlobalVertexAttribs + i;
-			glEnableVertexAttribArray(Attrib->Id);
-		}
+	{   TIMED_BLOCK("Render Sprites");
+		
+		glBindVertexArray(VertexArray);
+		glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer);
+		glUnmapBuffer(GL_ARRAY_BUFFER);
 
 		sprite_program *SpriteProg = &Renderer->SpriteProgram;
 		glUseProgram(SpriteProg->Id);
@@ -459,15 +485,17 @@ internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
 		GLint SpriteTexDimLoc = glGetUniformLocation(SpriteProg->Id, "SpriteTexDim");
 		GLint SpritemapsLoc = glGetUniformLocation(SpriteProg->Id, "Spritemaps");
 
+		// TODO: ProjectionTransform can happen anywhere in the pipeline. We might need to track it.
 		glUniform1i(SpritemapsLoc, TexUnit);
 		glUniformMatrix4fv(ProjectionTransformLoc, 1, GL_FALSE, ProjectionTransform.ptr);
 		glUniform2fv(SpriteHalfDimLoc, 1, SpriteHalfDim.E);
 		glUniform2fv(SpriteTexDimLoc, 1, SpriteTexDim.E);
 
-		// TODO: Is this even necessary?
+		// TODO: Is this even necessary? (probably not)
 		GLuint OutputBuffer = GL_BACK_LEFT;
 		glDrawBuffers(1, &OutputBuffer);
 
+#if 0
 		// TODO: Remove query!!!
 		GLuint Query;
 		glGenQueries(1, &Query);
@@ -478,12 +506,21 @@ internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
 		GLuint NumPrimitivesGenerated;
 		glGetQueryObjectuiv(Query, GL_QUERY_RESULT, &NumPrimitivesGenerated);
 		glDeleteQueries(1, &Query);
+#else
+		glDrawArrays(GL_POINTS, 0, SpriteVertexCount);
+#endif
+		glUseProgram(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindVertexArray(0);
 	}
 
-    // TODO: Keep vertex specification around (vertex array)
-    glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
-    glUseProgram(0);
-    glBindVertexArray(0);
-    glDeleteBuffers(1, &VertexBuffer);
-    glDeleteVertexArrays(1, &VertexArray);
+	{ TIMED_BLOCK("Cleanup");
+		glDeleteBuffers(1, &VertexBuffer);
+		glDeleteVertexArrays(1, &VertexArray);
+		glDeleteBuffers(1, &BasicVertexBuffer);
+		glDeleteVertexArrays(1, &BasicVertexArray);
+
+		// TODO: Keep vertex specification around (vertex array)
+		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+	}
 }

@@ -148,5 +148,11 @@
     <None Include="..\..\..\src\shaders\sprite_vertex.glsl">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="..\..\..\src\shaders\basic_fragment.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\..\src\shaders\basic_vertex.glsl">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

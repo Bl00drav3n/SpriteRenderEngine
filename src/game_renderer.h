@@ -1,6 +1,7 @@
 #ifndef __GAME_RENDERER_H__
 #define __GAME_RENDERER_H__
 
+#define MAX_NUM_BASIC_VERTICES 8192
 #define MAX_NUM_SPRITE_VERTICES 8192
 
 struct render_group;
@@ -77,6 +78,13 @@ struct sprite_pixel
     u8 a;
 };
 
+struct basic_vertex
+{
+	v2 Position;
+	v2 TexCoord;
+	v4 Tint;
+};
+
 struct spritemap_vertex
 {
     v2 Position;
@@ -101,6 +109,11 @@ struct spritemap_array
     u32 TextureHeight;
 };
 
+struct basic_program
+{
+	u32 Id;
+};
+
 struct sprite_program
 {
     u32 Id;
@@ -118,10 +131,11 @@ struct render_state
 
 	u32         TextureMemoryUsed;
 	texture *   FirstFreeTexture;
-
-    spritemap_array Spritemaps;
-    sprite_program SpriteProgram;
+	
+	basic_program BasicProgram;
 	line_program LineProgram;
+    sprite_program SpriteProgram;
+    spritemap_array Spritemaps;
 };
 
 static inline f32 MapU8ToF32(u8 Value)
@@ -180,6 +194,8 @@ internal void ReloadRenderBackend();
 internal texture * CreateTexture(render_state *State, u32 Width, u32 Height, u8 *Data);
 internal spritemap_array AllocateSpritemaps();
 internal void UpdateSpritemapSprite(spritemap_array *Spritemaps, u32 OffsetX, u32 OffsetY, u32 Index, sprite_pixel *Pixels);
+internal basic_program CreateBasicProgram(mem_arena *Memory);
+internal line_program CreateLineProgram();
 internal sprite_program CreateSpriteProgram(mem_arena *Memory);
 internal void DrawRenderGroup(render_state *Renderer, render_group *Group);
 
