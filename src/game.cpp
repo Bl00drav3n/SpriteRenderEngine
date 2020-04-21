@@ -286,7 +286,7 @@ internal void LoadDebugFont(game_state *State, ascii_font *Font)
 		glyph *Glyph = Font->Glyphs + GlyphIndex;
 		u8 Pixels[4 * MAX_GLYPH_PIXELS_X * MAX_GLYPH_PIXELS_Y];
 		u8 *Dst = Pixels;
-		u8 *Src = Font->Glyphs[GlyphIndex].Bitmap;
+		u8 *Src = Glyph->Bitmap;
 		for(s32 y = 0; y < Glyph->Height; y++) {
 			for(s32 x = 0; x < Glyph->Width; x++) {
 				u8 R = *Src++;
