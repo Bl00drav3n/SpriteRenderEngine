@@ -1,4 +1,4 @@
-void RandomSpriteColor(rand_lcg_state *Entropy, sprite_pixel *p)
+internal void RandomSpriteColor(rand_lcg_state *Entropy, sprite_pixel *p)
 {
     p->r = MapF32ToU8(GetUniformRandom01(Entropy));
     p->g = MapF32ToU8(GetUniformRandom01(Entropy));
@@ -6,24 +6,10 @@ void RandomSpriteColor(rand_lcg_state *Entropy, sprite_pixel *p)
     p->a = 0xff;
 }
 
-//#include <stdlib.h>
-spritemap_array AllocateTestSpritemaps()
+internal void CreateTestSpritemaps(spritemap_array *Spritemaps)
 {
-    spritemap_array Spritemaps = AllocateSpritemaps();
     rand_lcg_state Entropy = CreateRNG(0x38a923f4);
     for (u32 z = 0; z < SPRITEMAP_COUNT; z++) {
-#if 0
-        const u32 COUNT_X = SPRITEMAP_DIM_X * SPRITE_WIDTH;
-        const u32 COUNT_Y = SPRITEMAP_DIM_Y * SPRITE_HEIGHT;
-        sprite_pixel *cleared = (sprite_pixel*)malloc(COUNT_X * COUNT_Y * sizeof(*cleared));
-        for (u32 i = 0; i < COUNT_X * COUNT_Y; i++) {
-            cleared[i].a = 0xff;
-            cleared[i].r = 0xff;
-            cleared[i].g = 0x00;
-            cleared[i].b = 0xff;
-        }
-        glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, 0, 0, z, COUNT_X, COUNT_Y, 1, GL_RGBA, GL_UNSIGNED_BYTE, cleared);
-#endif
         for (u32 y = 0; y < SPRITEMAP_DIM_Y; y++) {
             for (u32 x = 0; x < SPRITEMAP_DIM_X; x++) {
                 sprite_pixel pixels[SPRITE_WIDTH * SPRITE_HEIGHT];
@@ -35,12 +21,16 @@ spritemap_array AllocateTestSpritemaps()
                 }
                 u32 OffsetX = x * SPRITE_WIDTH;
                 u32 OffsetY = y * SPRITE_HEIGHT;
-				UpdateSpritemapSprite(&Spritemaps, OffsetX, OffsetY, z, pixels);
+				UpdateSpritemapSprite(Spritemaps, OffsetX, OffsetY, z, pixels);
             }
         }
     }
+}
 
-    return Spritemaps;
+internal void InitializeRenderer(render_state *Renderer)
+{
+	InitializeRenderBackend(Renderer);
+	CreateTestSpritemaps(Renderer->Spritemaps);
 }
 
 texture * AllocateTexture(render_state *State) {
@@ -188,3 +178,5 @@ void LoadShaderSources(mem_arena *Memory, char *ShaderSourceNames[3], char *Shad
 		}
 	}
 }
+
+#include "game_renderer_opengl.cpp"

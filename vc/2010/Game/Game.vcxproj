@@ -201,6 +201,7 @@ xcopy $(SolutionDir)..\..\src\shaders $(SolutionDir)..\..\rundir\data\shaders /Y
     <ClInclude Include="..\..\..\src\stb_image.h" />
     <ClInclude Include="..\..\..\src\string_util.h" />
     <ClInclude Include="game_config.h" />
+    <ClInclude Include="game_renderer_backend.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\game.cpp" />

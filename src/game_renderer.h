@@ -124,18 +124,25 @@ struct line_program
 	u32 Id;
 };
 
+struct render_backend {
+	// NOTE: opaque pointer used by implementation
+	void *State;
+};
+
 struct render_state
 {
 	mem_arena   Memory;
 	mem_arena * PerFrameMemory;
 
+	render_backend Backend;
+
 	u32         TextureMemoryUsed;
 	texture *   FirstFreeTexture;
-	
+    spritemap_array *Spritemaps;
+
 	basic_program BasicProgram;
 	line_program LineProgram;
     sprite_program SpriteProgram;
-    spritemap_array Spritemaps;
 };
 
 static inline f32 MapU8ToF32(u8 Value)
@@ -190,13 +197,6 @@ static inline v4 PremultiplyAlpha(v4 ColorIn)
     return Result;
 }
 
-internal void ReloadRenderBackend();
-internal texture * CreateTexture(render_state *State, u32 Width, u32 Height, u8 *Data);
-internal spritemap_array AllocateSpritemaps();
-internal void UpdateSpritemapSprite(spritemap_array *Spritemaps, u32 OffsetX, u32 OffsetY, u32 Index, sprite_pixel *Pixels);
-internal basic_program CreateBasicProgram(mem_arena *Memory);
-internal line_program CreateLineProgram();
-internal sprite_program CreateSpriteProgram(mem_arena *Memory);
-internal void DrawRenderGroup(render_state *Renderer, render_group *Group);
+#include "game_renderer_backend.h"
 
 #endif

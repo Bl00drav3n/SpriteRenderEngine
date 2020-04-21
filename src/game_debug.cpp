@@ -1173,7 +1173,7 @@ internal void DebugSystem(debug_state *DebugState, game_state *State, window_par
         u32 TargetWidth = SPRITEMAP_LAYER_WIDTH / 2;
         u32 TargetHeight = SPRITEMAP_LAYER_HEIGHT / 2;
         for (u32 i = 0; i < SPRITEMAP_COUNT; i++) {
-            glFramebufferTextureLayer(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, State->Renderer.Spritemaps.TexId, 0, i);
+            glFramebufferTextureLayer(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, State->Renderer.Spritemaps->TexId, 0, i);
             glBlitFramebuffer(0, 0, SPRITEMAP_LAYER_WIDTH, SPRITEMAP_LAYER_HEIGHT, OffsetX, OffsetY, OffsetX + TargetWidth, OffsetY + TargetHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
             OffsetX += TargetWidth + MarginX;
         }

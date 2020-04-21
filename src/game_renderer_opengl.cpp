@@ -1,5 +1,13 @@
 #include "game_opengl.h"
 
+struct opengl_state {
+	GLuint SpriteVertexArray;
+	GLuint SpriteVertexBuffer;
+
+	GLuint BasicVertexArray;
+	GLuint BasicVertexBuffer;
+};
+
 enum vertex_attrib_id
 {
     VertexAttrib_Position,
@@ -92,32 +100,6 @@ internal texture * CreateTexture(render_state *State, u32 Width, u32 Height, u8 
 	}
 
 	return Result;
-}
-
-internal spritemap_array AllocateSpritemaps()
-{
-    spritemap_array Result = {};
-
-    GLuint TexId;
-    glGenTextures(1, &TexId);
-    if (TexId) {
-        u32 TextureWidth = SPRITEMAP_DIM_X * SPRITE_WIDTH;
-        u32 TextureHeight = SPRITEMAP_DIM_Y * SPRITE_HEIGHT;
-
-        glBindTexture(GL_TEXTURE_2D_ARRAY, TexId);
-        glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, TextureWidth, TextureHeight, SPRITEMAP_COUNT, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);  
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
-
-        Result.TexId = TexId;
-        Result.TextureWidth = TextureWidth;
-        Result.TextureHeight = TextureHeight;
-    }
-
-    return Result;
 }
 
 internal void UpdateSpritemapSprite(spritemap_array *Spritemaps, u32 OffsetX, u32 OffsetY, u32 Index, sprite_pixel *Pixels) {
@@ -229,64 +211,152 @@ internal sprite_program CreateSpriteProgram(mem_arena *Memory)
     return Result;
 }
 
+internal void RenderSprites(render_state *Renderer, spritemap_vertex *Vertices, u32 VertexCount, const mat4 &ProjectionTransform)
+{   
+	TIMED_FUNCTION();
+
+	opengl_state *State = (opengl_state*)Renderer->Backend.State;
+	GLuint VertexArray = State->SpriteVertexArray;
+	GLuint VertexBuffer = State->SpriteVertexBuffer;
+		
+	glBindVertexArray(VertexArray);
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, VertexCount * sizeof(*Vertices), Vertices);
+
+	sprite_program *SpriteProg = &Renderer->SpriteProgram;
+	glUseProgram(SpriteProg->Id);
+
+	u32 TexUnit = 0;
+	spritemap_array *Spritemaps = Renderer->Spritemaps;
+	glActiveTexture(GL_TEXTURE0 + TexUnit);
+	glBindTexture(GL_TEXTURE_2D_ARRAY, Spritemaps->TexId);
+
+	v2 SpriteHalfDim = V2(2.5f, 2.5f);
+	v2 SpriteTexDim = V2(1.f / (f32)SPRITEMAP_DIM_X, 1.f / (f32)SPRITEMAP_DIM_Y);
+		
+	GLint ProjectionTransformLoc = glGetUniformLocation(SpriteProg->Id, "ProjectionTransform");
+	GLint SpriteHalfDimLoc = glGetUniformLocation(SpriteProg->Id, "SpriteHalfDim");
+	GLint SpriteTexDimLoc = glGetUniformLocation(SpriteProg->Id, "SpriteTexDim");
+	GLint SpritemapsLoc = glGetUniformLocation(SpriteProg->Id, "Spritemaps");
+
+	// TODO: ProjectionTransform can happen anywhere in the pipeline. We might need to track it.
+	glUniform1i(SpritemapsLoc, TexUnit);
+	glUniformMatrix4fv(ProjectionTransformLoc, 1, GL_FALSE, ProjectionTransform.ptr);
+	glUniform2fv(SpriteHalfDimLoc, 1, SpriteHalfDim.E);
+	glUniform2fv(SpriteTexDimLoc, 1, SpriteTexDim.E);
+
+	// TODO: Is this even necessary? (probably not)
+	GLuint OutputBuffer = GL_BACK_LEFT;
+	glDrawBuffers(1, &OutputBuffer);
+
+#if 0
+	// TODO: Remove query!!!
+	GLuint Query;
+	glGenQueries(1, &Query);
+	glBeginQuery(GL_PRIMITIVES_GENERATED, Query);
+	glDrawArrays(GL_POINTS, 0, SpriteVertexCount);
+	glEndQuery(GL_PRIMITIVES_GENERATED);
+
+	GLuint NumPrimitivesGenerated;
+	glGetQueryObjectuiv(Query, GL_QUERY_RESULT, &NumPrimitivesGenerated);
+	glDeleteQueries(1, &Query);
+#else
+	glDrawArrays(GL_POINTS, 0, VertexCount);
+#endif
+	glUseProgram(0);
+	glBindVertexArray(0);
+}
+
+internal void InitializeRenderBackend(render_state *Renderer)
+{
+	Assert(Renderer->Backend.State == 0);
+	opengl_state *State = push_type(&Renderer->Memory, opengl_state);
+	Renderer->Backend.State = State;	
+	
+	// NOTE: Basic
+	glGenVertexArrays(1, &State->BasicVertexArray);
+	glBindVertexArray(State->BasicVertexArray);
+		
+	glGenBuffers(1, &State->BasicVertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, State->BasicVertexBuffer);
+	glBufferData(GL_ARRAY_BUFFER, MAX_NUM_BASIC_VERTICES * sizeof(basic_vertex), 0, GL_STATIC_DRAW);
+
+	glVertexAttribPointer(VertexAttrib_Position, 2, GL_FLOAT, GL_FALSE, sizeof(basic_vertex), (void*)offsetof(basic_vertex, Position));
+	glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Position].Id);
+
+	glVertexAttribPointer(VertexAttrib_TexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(basic_vertex), (void*)offsetof(basic_vertex, TexCoord));
+	glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_TexCoord].Id);
+
+	glVertexAttribPointer(VertexAttrib_Tint, 4, GL_FLOAT, GL_FALSE, sizeof(basic_vertex), (void*)offsetof(basic_vertex, Tint));
+	glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Tint].Id);
+
+	// NOTE: Sprites
+	glGenVertexArrays(1, &State->SpriteVertexArray);
+	glBindVertexArray(State->SpriteVertexArray);
+
+	glGenBuffers(1, &State->SpriteVertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, State->SpriteVertexBuffer);
+	glBufferData(GL_ARRAY_BUFFER, MAX_NUM_SPRITE_VERTICES * sizeof(spritemap_vertex), 0, GL_STREAM_DRAW);
+	
+	glVertexAttribPointer(VertexAttrib_Position, 2, GL_FLOAT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Position));
+	glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Position].Id);
+	
+	glVertexAttribPointer(VertexAttrib_SpriteOffset, 3, GL_INT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Offset));
+	glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_SpriteOffset].Id);
+	
+	glVertexAttribPointer(VertexAttrib_Tint, 4, GL_FLOAT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Tint));
+	glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Tint].Id);
+
+	// NOTE: Spritemaps
+	{
+		spritemap_array *Map = push_type(&Renderer->Memory, spritemap_array);
+		GLuint TexId;
+		glGenTextures(1, &TexId);
+		if (TexId) {
+			u32 TextureWidth = SPRITEMAP_DIM_X * SPRITE_WIDTH;
+			u32 TextureHeight = SPRITEMAP_DIM_Y * SPRITE_HEIGHT;
+
+			glBindTexture(GL_TEXTURE_2D_ARRAY, TexId);
+			glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, TextureWidth, TextureHeight, SPRITEMAP_COUNT, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);  
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+
+			Map->TexId = TexId;
+			Map->TextureWidth = TextureWidth;
+			Map->TextureHeight = TextureHeight;
+			// TODO: Use a stub spritemap for release so we don't crash if we run out of resources (unlikely)?
+			Renderer->Spritemaps = Map;
+		}
+	}
+
+	// NOTE: Shaders
+	Renderer->BasicProgram = CreateBasicProgram(&Renderer->Memory);
+	Renderer->LineProgram = CreateLineProgram(&Renderer->Memory);
+    Renderer->SpriteProgram = CreateSpriteProgram(&Renderer->Memory);
+	
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+}
+
 internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
 {
+	opengl_state *State = (opengl_state*)Renderer->Backend.State;
+	Assert(State != 0);
+
     // TODO: We always use the last PushTransform call
 	// NOTE: This depends on the command right now.
     mat4 ProjectionTransform = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
     u32 SpriteVertexCount = 0;
     spritemap_vertex *SpriteVertices = 0;
-	GLuint VertexArray;
-	GLuint VertexBuffer;
-	GLuint BasicVertexArray;
-	GLuint BasicVertexBuffer;
 
     TIMED_FUNCTION();
 	{ TIMED_BLOCK("Setup");
 
 		SetDefaultGLState();
-
-		// TODO: Create some persistant state for buffers etc. and only allocate/initialize once
-		// TODO: This is old crap omg
-		glGenVertexArrays(1, &VertexArray);
-		glBindVertexArray(VertexArray);
-
-		glGenBuffers(1, &VertexBuffer);
-		glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer);
-		glBufferData(GL_ARRAY_BUFFER, MAX_NUM_SPRITE_VERTICES * sizeof(spritemap_vertex), 0, GL_STATIC_DRAW);
-	
-		glVertexAttribPointer(VertexAttrib_Position, 2, GL_FLOAT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Position));
-		glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Position].Id);
-	
-		glVertexAttribPointer(VertexAttrib_SpriteOffset, 3, GL_INT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Offset));
-		glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_SpriteOffset].Id);
-	
-		glVertexAttribPointer(VertexAttrib_Tint, 4, GL_FLOAT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Tint));
-		glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Tint].Id);
-
-		SpriteVertices = (spritemap_vertex*)glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY);
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
-
-		glGenVertexArrays(1, &BasicVertexArray);
-		glBindVertexArray(BasicVertexArray);
-		
-		glGenBuffers(1, &BasicVertexBuffer);
-		glBindBuffer(GL_ARRAY_BUFFER, BasicVertexBuffer);
-		glBufferData(GL_ARRAY_BUFFER, MAX_NUM_BASIC_VERTICES * sizeof(basic_vertex), 0, GL_STATIC_DRAW);
-
-		glVertexAttribPointer(VertexAttrib_Position, 2, GL_FLOAT, GL_FALSE, sizeof(basic_vertex), (void*)offsetof(basic_vertex, Position));
-		glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Position].Id);
-
-		glVertexAttribPointer(VertexAttrib_TexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(basic_vertex), (void*)offsetof(basic_vertex, TexCoord));
-		glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_TexCoord].Id);
-
-		glVertexAttribPointer(VertexAttrib_Tint, 4, GL_FLOAT, GL_FALSE, sizeof(basic_vertex), (void*)offsetof(basic_vertex, Tint));
-		glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Tint].Id);
-	
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
+		SpriteVertices = (spritemap_vertex*)push_array(Renderer->PerFrameMemory, spritemap_vertex, MAX_NUM_SPRITE_VERTICES);
 	}
 
 	{ TIMED_BLOCK("Execute command buffer");
@@ -377,8 +447,8 @@ internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
 						Vertices[i].Tint = Entry->Color;
 					}
 					
-					glBindVertexArray(BasicVertexArray);
-					glBindBuffer(GL_ARRAY_BUFFER, BasicVertexBuffer);
+					glBindVertexArray(State->BasicVertexArray);
+					glBindBuffer(GL_ARRAY_BUFFER, State->BasicVertexBuffer);
 					glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Vertices), Vertices);
 
 					glUseProgram(Renderer->BasicProgram.Id);
@@ -463,64 +533,9 @@ internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
 #undef END_CASE_AND_BREAK
 	} // TIMED_BLOCK
 
-	{   TIMED_BLOCK("Render Sprites");
-		
-		glBindVertexArray(VertexArray);
-		glBindBuffer(GL_ARRAY_BUFFER, VertexBuffer);
-		glUnmapBuffer(GL_ARRAY_BUFFER);
-
-		sprite_program *SpriteProg = &Renderer->SpriteProgram;
-		glUseProgram(SpriteProg->Id);
-
-		u32 TexUnit = 0;
-		spritemap_array *Spritemaps = &Renderer->Spritemaps;
-		glActiveTexture(GL_TEXTURE0 + TexUnit);
-		glBindTexture(GL_TEXTURE_2D_ARRAY, Spritemaps->TexId);
-
-		v2 SpriteHalfDim = V2(2.5f, 2.5f);
-		v2 SpriteTexDim = V2(1.f / (f32)SPRITEMAP_DIM_X, 1.f / (f32)SPRITEMAP_DIM_Y);
-		
-		GLint ProjectionTransformLoc = glGetUniformLocation(SpriteProg->Id, "ProjectionTransform");
-		GLint SpriteHalfDimLoc = glGetUniformLocation(SpriteProg->Id, "SpriteHalfDim");
-		GLint SpriteTexDimLoc = glGetUniformLocation(SpriteProg->Id, "SpriteTexDim");
-		GLint SpritemapsLoc = glGetUniformLocation(SpriteProg->Id, "Spritemaps");
-
-		// TODO: ProjectionTransform can happen anywhere in the pipeline. We might need to track it.
-		glUniform1i(SpritemapsLoc, TexUnit);
-		glUniformMatrix4fv(ProjectionTransformLoc, 1, GL_FALSE, ProjectionTransform.ptr);
-		glUniform2fv(SpriteHalfDimLoc, 1, SpriteHalfDim.E);
-		glUniform2fv(SpriteTexDimLoc, 1, SpriteTexDim.E);
-
-		// TODO: Is this even necessary? (probably not)
-		GLuint OutputBuffer = GL_BACK_LEFT;
-		glDrawBuffers(1, &OutputBuffer);
-
-#if 0
-		// TODO: Remove query!!!
-		GLuint Query;
-		glGenQueries(1, &Query);
-		glBeginQuery(GL_PRIMITIVES_GENERATED, Query);
-		glDrawArrays(GL_POINTS, 0, SpriteVertexCount);
-		glEndQuery(GL_PRIMITIVES_GENERATED);
-
-		GLuint NumPrimitivesGenerated;
-		glGetQueryObjectuiv(Query, GL_QUERY_RESULT, &NumPrimitivesGenerated);
-		glDeleteQueries(1, &Query);
-#else
-		glDrawArrays(GL_POINTS, 0, SpriteVertexCount);
-#endif
-		glUseProgram(0);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		glBindVertexArray(0);
-	}
+	RenderSprites(Renderer, SpriteVertices, SpriteVertexCount, ProjectionTransform);
 
 	{ TIMED_BLOCK("Cleanup");
-		glDeleteBuffers(1, &VertexBuffer);
-		glDeleteVertexArrays(1, &VertexArray);
-		glDeleteBuffers(1, &BasicVertexBuffer);
-		glDeleteVertexArrays(1, &BasicVertexArray);
-
-		// TODO: Keep vertex specification around (vertex array)
 		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 	}
 }

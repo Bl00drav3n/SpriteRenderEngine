@@ -22,7 +22,6 @@ global_persist platform_api * Platform = 0;
 #include "spline.cpp"
 #include "game_render_group.cpp"
 #include "game_renderer.cpp"
-#include "game_renderer_opengl.cpp"
 #include "game_particles.cpp"
 #include "game_entity.cpp"
 #include "game_level.cpp"
@@ -629,35 +628,7 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
         State->DebugHitCount = 0;
 
-#if 0
-        spritemap_array Spritemaps = AllocateSpritemaps();
-        sprite_pixel pixels[SPRITE_WIDTH * SPRITE_HEIGHT];
-        for (u32 i = 0; i < ArrayCount(pixels); i++) {
-            pixels[i].r = 0xff;
-            pixels[i].g = 0xff;
-            pixels[i].b = 0xff;
-            pixels[i].a = 0xff;
-        }
-        glBindTexture(GL_TEXTURE_2D_ARRAY, Spritemaps.TexId);
-        for (u32 z = 0; z < SPRITEMAP_COUNT; z++) {
-            for (u32 y = 0; y < SPRITEMAP_DIM_Y; y++) {
-                for (u32 x = 0; x < SPRITEMAP_DIM_X; x++) {
-                    u32 OffsetX = x * SPRITE_WIDTH;
-                    u32 OffsetY = y * SPRITE_HEIGHT;
-                    glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, OffsetX, OffsetY, z, SPRITE_WIDTH, SPRITE_HEIGHT, 1, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-                }
-            }
-        }
-        glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
-#else
-        spritemap_array Spritemaps = AllocateTestSpritemaps();
-#endif
-		State->Renderer.BasicProgram = CreateBasicProgram(&State->Renderer.Memory);
-		State->Renderer.LineProgram = CreateLineProgram(&State->Renderer.Memory);
-		
-        State->Renderer.SpriteProgram = CreateSpriteProgram(&State->Renderer.Memory);
-        State->Renderer.Spritemaps = Spritemaps;
-
+		InitializeRenderer(&State->Renderer);
 		InitializeParticleCache(State->ParticleCache);
 		
 		State->Initialized = 1;
