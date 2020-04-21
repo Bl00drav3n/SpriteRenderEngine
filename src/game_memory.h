@@ -65,8 +65,10 @@ internal inline void CopyMemory(void *Dst, void *Src, u32 SrcSize)
 // SECTION: mem_arena
 
 // NOTE: uses a simple API where you can only push to the top (dynamically growing)
+#define MEM_ARENA_MAGIC 0x12345678
 struct mem_arena
 {
+	u32 Magic;
 	umm MinBlockSize;
 	platform_memory_block *Block;
 
@@ -95,6 +97,7 @@ static inline mem_arena
 CreateMemoryArena(umm MinBlockSize = 0)
 {
 	mem_arena Result = {};
+	Result.Magic = MEM_ARENA_MAGIC;
 	Result.MinBlockSize = MinBlockSize;
 	
 	return Result;
@@ -257,18 +260,13 @@ EndTempMemory(temporary_memory *Temp)
 {
 	if(Temp->Valid) {
 		mem_arena *Arena = Temp->Arena;
-		platform_memory_block *Block = Arena->Block;
-		while(Block != Temp->Block) {
-			platform_memory_block *Free = Block;
-			Block = Block->Prev; 
-			
-			Platform->DeallocateMemory(Free);
+		while(Arena->Block != Temp->Block) {
+			FreeLastBlock(Arena);
 		}
 
-		if(Block) {
-			Block->Used = Temp->Used;
+		if(Arena->Block) {
+			Arena->Block->Used = Temp->Used;
 		}
-		Arena->Block = Block;
 		Arena->TempCount--;
 		Temp->Valid = false;
 	}
