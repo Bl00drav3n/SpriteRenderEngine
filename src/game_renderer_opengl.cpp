@@ -73,10 +73,7 @@ void APIENTRY GLDebugOutputCallback(GLenum source, GLenum type, GLuint id, GLenu
 
 internal inline void SetDefaultGLState()
 {
-    glColor4f(1.f, 1.f, 1.f, 1.f);
-    glEnable(GL_TEXTURE_2D);
     glEnable(GL_BLEND);
-    //glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
     //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 

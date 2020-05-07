@@ -368,7 +368,7 @@ LPSTR lpCmdLine, int nCmdShow)
 		// TODO: Remove all non-core functionality!
 		int MajorVersion = 3;
 		int MinorVersion = 3;
-#if 1
+#if 0
 		int ProfileMask = WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB;
 #else
         int ProfileMask = WGL_CONTEXT_CORE_PROFILE_BIT_ARB;
