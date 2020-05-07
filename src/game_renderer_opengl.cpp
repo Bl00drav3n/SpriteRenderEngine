@@ -417,6 +417,7 @@ internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
 			switch(Header->Type) {
 				BEGIN_CASE(render_entry_sprite)
 				{
+					TIMED_BLOCK("render_entry_sprite");
 					if (SpriteVertexCount < MAX_NUM_SPRITE_VERTICES) {
 						spritemap_vertex *Vertex = SpriteVertices + SpriteVertexCount++;
 						Vertex->Position = Entry->Center;
@@ -428,6 +429,8 @@ internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
 
 				BEGIN_CASE(render_entry_text)
 				{
+					TIMED_BLOCK("render_entry_text");
+					// TODO: Use a common vertex buffer
 					glyph_vertex *VertexBase = (glyph_vertex*)((u8*)Entry + Entry->DataHeader.Offset);
 					Offset += Entry->DataHeader.Size;
 
@@ -488,7 +491,8 @@ internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
 
 				BEGIN_CASE(render_entry_lines)
 				{
-					// TODO: NOOOOOOOOOOOPE
+					TIMED_BLOCK("render_entry_lines");
+					// TODO: Use a common vertex buffer
 					v2 *PositionBase = (v2*)((u8*)Entry + Entry->DataHeader.Offset);
 					Offset += Entry->DataHeader.Size;
 
@@ -526,12 +530,13 @@ internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
 			
 				BEGIN_CASE(render_entry_rect)
 				{
+					// TODO: Remove this ugly copy paste (render_entry_rect_outline)
 					basic_vertex Vertices[4];
 					v2 TexCoord[4] = {
 						0, 0,
 						1, 0,
 						0, 1,
-						0, 1
+						1, 1
 					};
 					for(u32 i = 0; i < 4; i++) {
 						Vertices[i].Position = Entry->Corners[i].Position;
@@ -563,24 +568,40 @@ internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
 			
 				BEGIN_CASE(render_entry_rect_outline)
 				{
-#if 1
-					// TODO: NOPE
-					glDisable(GL_TEXTURE_2D);
-					glColor4fv(Entry->Color.E);
-					glBegin(GL_TRIANGLE_STRIP);
-					glVertex2fv(Entry->OuterCorners[0].Position.E);
-					glVertex2fv(Entry->InnerCorners[0].Position.E);
-					glVertex2fv(Entry->OuterCorners[1].Position.E);
-					glVertex2fv(Entry->InnerCorners[1].Position.E);
-					glVertex2fv(Entry->OuterCorners[2].Position.E);
-					glVertex2fv(Entry->InnerCorners[2].Position.E);
-					glVertex2fv(Entry->OuterCorners[3].Position.E);
-					glVertex2fv(Entry->InnerCorners[3].Position.E);
-					glVertex2fv(Entry->OuterCorners[0].Position.E);
-					glVertex2fv(Entry->InnerCorners[0].Position.E);
-					glEnd();
-					SetDefaultGLState();
-#endif
+					// TODO: Remove this ugly copy paste (render_entry_rect)
+					basic_vertex Vertices[10];
+					// TODO: Tex coordinates might not make much sense (proper UV)
+					v2 TexCoord[10] = {};
+					u32 Indices[5] = { 0, 1, 2, 3, 0 };
+					for(u32 i = 0; i < 5; i++) {
+						Vertices[2 * i + 0].Position = Entry->OuterCorners[Indices[i]].Position;
+						Vertices[2 * i + 0].TexCoord = TexCoord[i];
+						Vertices[2 * i + 0].Tint = Entry->Color;
+						Vertices[2 * i + 1].Position = Entry->InnerCorners[Indices[i]].Position;
+						Vertices[2 * i + 1].TexCoord = TexCoord[i];
+						Vertices[2 * i + 1].Tint = Entry->Color;
+					}
+					
+					glBindVertexArray(State->BasicVertexArray);
+					glBindBuffer(GL_ARRAY_BUFFER, State->BasicVertexBuffer);
+					glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(Vertices), Vertices);
+
+					glUseProgram(Renderer->BasicProgram.Id);
+
+					// TODO: Cache locations
+					GLint ProjectionTransformLoc = glGetUniformLocation(Renderer->BasicProgram.Id, "ProjectionTransform");
+					glUniformMatrix4fv(ProjectionTransformLoc, 1, GL_FALSE, ProjectionTransform.ptr);
+				
+					// TODO: Load a white 1x1 texture OR remove texturing from basic shader!
+					GLint TexLoc = glGetUniformLocation(Renderer->BasicProgram.Id, "Tex");
+					GLint TexUnit = 1;
+					glUniform1i(TexLoc, TexUnit);
+
+					glDrawArrays(GL_TRIANGLE_STRIP, 0, 10);
+
+					glBindVertexArray(0);
+					glBindBuffer(GL_ARRAY_BUFFER, 0);
+					glUseProgram(0);
 				} END_CASE_AND_BREAK;
 
 				BEGIN_CASE(render_entry_clear)
@@ -591,17 +612,7 @@ internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
 			
 				BEGIN_CASE(render_entry_transformation)
 				{
-					// TODO: Load uniforms
-					// TODO: Facepalm
-#if 1
-					glMatrixMode(GL_MODELVIEW);
-					glLoadIdentity();
-
-					glMatrixMode(GL_PROJECTION);
-					glLoadIdentity();
-					glViewport(Entry->Viewport.X, Entry->Viewport.Y, Entry->Viewport.Width, Entry->Viewport.Height);
-					glLoadMatrixf(Entry->Projection.ptr);
-#endif
+					// TODO: Figure out how we want to deal with transformations (per group, transformation block, etc.)
 					ProjectionTransform = Entry->Projection;
 
 				} END_CASE_AND_BREAK;
@@ -628,6 +639,10 @@ internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
 	RenderSprites(Renderer, SpriteVertices, SpriteVertexCount, ProjectionTransform);
 
 	{ TIMED_BLOCK("Cleanup");
+		glBindVertexArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+		glUseProgram(0);
 	}
 }
