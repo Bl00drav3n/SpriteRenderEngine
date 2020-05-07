@@ -1,4 +1,4 @@
-// NOTE: define GL_MACRO if you only want to assign function pointers
+﻿// NOTE: define GL_MACRO if you only want to assign function pointers
 // for example: #define GL_MACRO(name, ...) name = (PF_##name*)Load(#name)
 
 #ifndef GL_MACRO
@@ -53,6 +53,8 @@ typedef ptrdiff_t GLintptr;
 #define GL_BLEND                          0x0BE2
 #define GL_TEXTURE_2D                     0x0DE1
 #define GL_TEXTURE_2D_ARRAY               0x8C1A
+#define GL_TEXTURE_BUFFER                 0x8C2A
+
 #define GL_CLAMP_TO_EDGE                  0x812F
 #define GL_BYTE                           0x1400
 #define GL_UNSIGNED_BYTE                  0x1401
@@ -87,6 +89,27 @@ typedef ptrdiff_t GLintptr;
 #define GL_DST_ALPHA                      0x0304
 #define GL_ONE_MINUS_DST_ALPHA            0x0305
 #define GL_RGBA8                          0x8058
+#define GL_R8                             0x8229
+#define GL_R16                            0x822A
+#define GL_RG8                            0x822B
+#define GL_RG16                           0x822C
+#define GL_R16F                           0x822D
+#define GL_R32F                           0x822E
+#define GL_RG16F                          0x822F
+#define GL_RG32F                          0x8230
+#define GL_R8I                            0x8231
+#define GL_R8UI                           0x8232
+#define GL_R16I                           0x8233
+#define GL_R16UI                          0x8234
+#define GL_R32I                           0x8235
+#define GL_R32UI                          0x8236
+#define GL_RG8I                           0x8237
+#define GL_RG8UI                          0x8238
+#define GL_RG16I                          0x8239
+#define GL_RG16UI                         0x823A
+#define GL_RG32I                          0x823B
+#define GL_RG32UI                         0x823C
+#define GL_RGBA32F                        0x8814
 #define GL_VERTEX_ARRAY                   0x8074
 #define GL_FRAGMENT_SHADER                0x8B30
 #define GL_VERTEX_SHADER                  0x8B31
@@ -228,6 +251,7 @@ typedef void (APIENTRY *GLDEBUGPROCARB)(GLenum source, GLenum type, GLuint id, G
 GL_MACRO(glTexParameteri, void, GLenum target, GLenum pname, GLint param);
 GL_MACRO(glTexImage2D, void, GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid * data);
 GL_MACRO(glTexImage3D, void, GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid * data);
+GL_MACRO(glTexBuffer, void, GLenum target, GLenum internalformat, GLuint buffer);
 GL_MACRO(glTexSubImage3D, void, GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint zoffset, GLsizei width, GLsizei height, GLsizei depth, GLenum format, GLenum type, const GLvoid * pixels);
 GL_MACRO(glTexEnvi, void, GLenum target, GLenum pname, GLint param);
 GL_MACRO(glActiveTexture, void, GLenum texture);
@@ -239,6 +263,7 @@ GL_MACRO(glBufferData, void, GLenum target, GLsizeiptr size, const GLvoid * data
 GL_MACRO(glBufferSubData, void, GLenum target, GLintptr offset, GLsizeiptr size, const GLvoid * data);
 GL_MACRO(glDeleteBuffers, void, GLsizei n, const GLuint * buffers);
 GL_MACRO(glDeleteVertexArrays, void, GLsizei n, const GLuint *arrays);
+GL_MACRO(glBufferStorage, void, GLenum target​, GLsizeiptr size​, const GLvoid * data​, GLbitfield flags​);
 GL_MACRO(glMapBuffer, void *, GLenum target, GLenum access);
 GL_MACRO(glUnmapBuffer, GLboolean, GLenum target);
 GL_MACRO(glBindBuffer, void, GLenum target, GLuint buffer);
@@ -280,12 +305,14 @@ GL_MACRO(glBindAttribLocation, void, GLuint program, GLuint index, const GLchar 
 GL_MACRO(glEnableVertexAttribArray, void, GLuint index);
 GL_MACRO(glDisableVertexAttribArray, void, GLuint index);
 GL_MACRO(glVertexAttribPointer, void, GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid * pointer);
+GL_MACRO(glVertexAttribIPointer, void, GLuint index, GLint size, GLenum type, GLsizei stride, const void * pointer);
 GL_MACRO(glGetProgramiv, void, GLuint program, GLenum pname, GLint *params);
 GL_MACRO(glGetProgramInfoLog, void, GLuint program, GLsizei maxLength, GLsizei *length, GLchar *infoLog);
 GL_MACRO(glFlush, void, void);
 GL_MACRO(glFinish, void, void);
 GL_MACRO(glUniform1i, void, GLint location, GLint v0);
 GL_MACRO(glUniform1f, void, GLint location, GLfloat v0);
+GL_MACRO(glUniform2i, void, GLint location, GLint v0, GLint v1);
 GL_MACRO(glUniform2f, void, GLint location, GLfloat v0, GLfloat v1);
 GL_MACRO(glUniform3f, void, GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
 GL_MACRO(glUniform4f, void, GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
@@ -298,6 +325,7 @@ GL_MACRO(glDrawBuffers, void, GLsizei n, const GLenum *bufs);
 GL_MACRO(glGenFramebuffers, void, GLsizei n, GLuint *ids);
 GL_MACRO(glDeleteFramebuffers, void, GLsizei n, GLuint *framebuffers);
 GL_MACRO(glBindFramebuffer, void, GLenum target, GLuint framebuffer);
+GL_MACRO(glFramebufferTexture2D, void, GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
 GL_MACRO(glFramebufferTextureLayer, void, GLenum target, GLenum attachment, GLuint texture, GLint level, GLint layer);
 GL_MACRO(glBlitFramebuffer, void, GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter);
 

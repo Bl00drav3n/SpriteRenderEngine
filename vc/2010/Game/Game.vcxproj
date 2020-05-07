@@ -180,6 +180,7 @@ xcopy $(SolutionDir)..\..\src\shaders $(SolutionDir)..\..\rundir\data\shaders /Y
   <ItemGroup>
     <ClInclude Include="..\..\..\src\file_format.h" />
     <ClInclude Include="..\..\..\src\font.h" />
+    <ClInclude Include="..\..\..\src\game.h" />
     <ClInclude Include="..\..\..\src\game_assets.h" />
     <ClInclude Include="..\..\..\src\game_config.h" />
     <ClInclude Include="..\..\..\src\game_debug.h" />
@@ -285,6 +286,9 @@ xcopy $(SolutionDir)..\..\src\shaders $(SolutionDir)..\..\rundir\data\shaders /Y
     <None Include="..\..\..\src\shaders\sprite_fragment.glsl" />
     <None Include="..\..\..\src\shaders\sprite_geometry.glsl" />
     <None Include="..\..\..\src\shaders\sprite_vertex.glsl" />
+    <None Include="..\..\..\src\shaders\text_fragment.glsl" />
+    <None Include="..\..\..\src\shaders\text_geometry.glsl" />
+    <None Include="..\..\..\src\shaders\text_vertex.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

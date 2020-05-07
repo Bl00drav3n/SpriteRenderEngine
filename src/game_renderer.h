@@ -85,6 +85,12 @@ struct basic_vertex
 	v4 Tint;
 };
 
+struct glyph_vertex
+{
+	v2 Position;
+	u32 Index;
+};
+
 struct spritemap_vertex
 {
     v2 Position;
@@ -109,6 +115,7 @@ struct spritemap_array
     u32 TextureHeight;
 };
 
+// TODO: Consolidate (save uniforms and vertex attribs, move to backend?)
 struct basic_program
 {
 	u32 Id;
@@ -124,9 +131,19 @@ struct line_program
 	u32 Id;
 };
 
+struct text_program
+{
+	u32 Id;
+};
+
 struct render_backend {
 	// NOTE: opaque pointer used by implementation
 	void *State;
+};
+
+struct font
+{
+	ascii_font * Data;
 };
 
 struct render_state
@@ -138,11 +155,17 @@ struct render_state
 
 	u32         TextureMemoryUsed;
 	texture *   FirstFreeTexture;
-    spritemap_array *Spritemaps;
+    
+	spritemap_array *Spritemaps;
+	
+	font DebugFont;
+	u32 GlyphDataHandle;
+	texture *GlyphAtlas;
 
 	basic_program BasicProgram;
 	line_program LineProgram;
     sprite_program SpriteProgram;
+	text_program TextProgram;
 };
 
 static inline f32 MapU8ToF32(u8 Value)

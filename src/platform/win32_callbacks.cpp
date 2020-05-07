@@ -150,6 +150,7 @@ internal PLATFORM_ALLOCATE_MEMORY(Win32AllocateMemory)
 	win32_memory_block * MemBlock = (win32_memory_block *)VirtualAlloc(0, TotalSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 	if(MemBlock) {
 		Result = (platform_memory_block*)MemBlock;		
+		Result->Magic = PLATFORM_MEMORY_BLOCK_MAGIC;
 		Result->Base = (u8*)(MemBlock + 1);
 		Result->Size = Size;
 		Result->Used = 0;

@@ -90,6 +90,9 @@
     <ClInclude Include="game_renderer_backend.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\src\game.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\game.cpp">
@@ -155,6 +158,15 @@
       <Filter>Shaders</Filter>
     </None>
     <None Include="..\..\..\src\shaders\basic_vertex.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\..\src\shaders\text_geometry.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\..\src\shaders\text_vertex.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="..\..\..\src\shaders\text_fragment.glsl">
       <Filter>Shaders</Filter>
     </None>
   </ItemGroup>

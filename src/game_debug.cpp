@@ -602,28 +602,30 @@ internal void ProcessDebugInput(debug_state *DebugState, game_inputs *Inputs, u8
 	}
 }
 
-struct draw_glyph_entry {
+/*
+
+struct debug_draw_glyph_entry {
 	f32 OffsetX;
 	u8 Codepoint;
 };
 
-struct draw_line_spec
+struct debug_draw_line_spec
 {
 	font *Font;
 	f32 Width;
 	u32 EntryCount;
-	draw_glyph_entry Entries[MAX_DEBUG_CONSOLE_LINE_CHAR_COUNT];
+	debug_draw_glyph_entry Entries[MAX_DEBUG_CONSOLE_LINE_CHAR_COUNT];
 };
 
-internal void PushGlyphEntry(draw_line_spec *Spec, f32 OffsetX, u8 Codepoint)
+internal void DebugPushGlyphEntry(debug_draw_line_spec *Spec, f32 OffsetX, u8 Codepoint)
 {
 	Assert(Spec->EntryCount < MAX_DEBUG_CONSOLE_LINE_CHAR_COUNT);
-	draw_glyph_entry *Entry = Spec->Entries + Spec->EntryCount++;
+	debug_draw_glyph_entry *Entry = Spec->Entries + Spec->EntryCount++;
 	Entry->OffsetX = OffsetX;
 	Entry->Codepoint = Codepoint;
 }
 
-internal void ProcessTextLine(debug_console_text_line *Line, font *Font, draw_line_spec *Spec)
+internal void ProcessTextLine(debug_console_text_line *Line, font *Font, debug_draw_line_spec *Spec)
 {
 	u8 PrevCodepoint = 0;
 	f32 Width = 0.f;
@@ -639,7 +641,7 @@ internal void ProcessTextLine(debug_console_text_line *Line, font *Font, draw_li
 		}
 
 		OffsetX += FontGetKerning(Font->Data, Codepoint, PrevCodepoint);
-		PushGlyphEntry(Spec, OffsetX, Codepoint);
+		DebugPushGlyphEntry(Spec, OffsetX, Codepoint);
 		OffsetX += Glyphs[Codepoint].AdvanceWidth;
 		PrevCodepoint = Codepoint;
 		Width += OffsetX;
@@ -651,7 +653,7 @@ internal void ProcessTextLine(debug_console_text_line *Line, font *Font, draw_li
 
 internal void ConsoleTextLine(render_group *Group, font *Font, debug_console_text_line *Line, v2 Origin)
 {
-	draw_line_spec TextSpec;
+	debug_draw_line_spec TextSpec;
 	ProcessTextLine(Line, Font, &TextSpec);
 
 	glyph *Glyphs = Font->Data->Glyphs;
@@ -660,6 +662,12 @@ internal void ConsoleTextLine(render_group *Group, font *Font, debug_console_tex
 		v2 At = V2(Origin.x + Entry->OffsetX, Origin.y);
 		PushGlyph(Group, Font, At, Entry->Codepoint);
 	}
+}
+*/
+
+internal void ConsoleTextLine(render_group *Group, font *Font, debug_console_text_line *Line, v2 Origin)
+{
+	PushText(Group, Font, (char*)Line->Buffer, Line->Size, Origin, V4(1.f, 1.f, 1.f, 1.f));
 }
 
 internal void DebugConsole(render_group *Group, debug_console *Console, font *Font, window_params *WindowParams, u32 LineCount = 16)
@@ -943,7 +951,7 @@ internal void DebugOverlay(render_group *Group, game_state *State, debug_state *
 {
 	TIMED_FUNCTION();
 
-	f32 LineAdvance = FontGetLineAdvance(State->DebugFont.Data);
+	f32 LineAdvance = FontGetLineAdvance(State->Renderer.DebugFont.Data);
 	v2 CursorP = V2(Inputs->MouseX * Window->Width, Inputs->MouseY * Window->Height);
 
 	u32 TextCmdBufferSize = KILOBYTES(4);
@@ -1012,9 +1020,9 @@ internal void DebugOverlay(render_group *Group, game_state *State, debug_state *
 	text_fmt_push_u64_milli((u64)(1000000.f * FrameTime));
 	text_fmt_push_newline();
 	
-	v2 TextCursorP = V2(8.f, Window->Height - State->DebugFont.Data->Ascent);
+	v2 TextCursorP = V2(8.f, Window->Height - State->Renderer.DebugFont.Data->Ascent);
 	EndFormattedText();
-	v2 LayoutAt = PushFormattedText(Group, &State->DebugFont, &DebugText, TextCursorP);
+	v2 LayoutAt = PushFormattedText(Group, &State->Renderer.DebugFont, &DebugText, TextCursorP);
 	
 	v2 GraphDim = V2(300.f, 100.f);
 	v2 GraphAt = V2((f32)Window->Width - 300.f, (f32)Window->Height - 100.f);
@@ -1068,7 +1076,7 @@ internal void DebugOverlay(render_group *Group, game_state *State, debug_state *
 					1000.f * ((f32)HotNode->CycleCount / DebugState->CyclesPerSecond),
 					HotNode->CycleCount, 
 					100.f * (f32)HotNode->CycleCount / (f32)RootNode->CycleCount);
-				text_extent TextExtent = GetTextExtent(&State->DebugFont, HotNodeText);
+				text_extent TextExtent = GetTextExtent(&State->Renderer.DebugFont, HotNodeText);
 
 				v2 TextP = CursorP + V2(0.f, -TextExtent.LowerRight.y);
 				v2 HalfDim = 0.5f * (TextExtent.LowerRight - TextExtent.UpperLeft);
@@ -1076,7 +1084,7 @@ internal void DebugOverlay(render_group *Group, game_state *State, debug_state *
 				rect2 R = MakeRectHalfDim(Center, V2(HalfDim.x, -HalfDim.y));
 				PushRectangle(Group, R, V4(0.f, 0.f, 0.f, 0.5f));
 		
-				PushText(Group, &State->DebugFont, HotNodeText, TextP, V4(1.f, 1.f, 1.f, 1.f));
+				PushText(Group, &State->Renderer.DebugFont, HotNodeText, StrLen(HotNodeText), TextP, V4(1.f, 1.f, 1.f, 1.f));
 			}
 		}
 		if(Inputs->State[BUTTON_MOUSE_RIGHT] && Inputs->HalfTransitionCount[BUTTON_MOUSE_RIGHT]) {
@@ -1103,7 +1111,7 @@ internal void DebugOverlay(render_group *Group, game_state *State, debug_state *
 					100.f * (f32)AvgCycleCount / (f32)RootNode->CycleCount);
 		
 				LayoutAt.y -= LineAdvance;
-				PushText(Group, &State->DebugFont, RecordText, LayoutAt, V4(1.f, 1.f, 1.f, 1.f));
+				PushText(Group, &State->Renderer.DebugFont, RecordText, StrLen(RecordText), LayoutAt, V4(1.f, 1.f, 1.f, 1.f));
 				
 				Record = Record->NextInHash;
 			}
@@ -1155,7 +1163,7 @@ internal void DebugSystem(debug_state *DebugState, game_state *State, window_par
 	}
 	
 	if(DebugState->Console.Active) {
-		DebugConsole(&Group, &DebugState->Console, &State->DebugFont, Window);
+		DebugConsole(&Group, &DebugState->Console, &State->Renderer.DebugFont, Window);
 	}
 
 	DrawRenderGroup(&State->Renderer, &Group);
@@ -1168,8 +1176,9 @@ internal void DebugSystem(debug_state *DebugState, game_state *State, window_par
         glBindFramebuffer(GL_READ_FRAMEBUFFER, Framebuffer);
 
         u32 MarginX = 8;
-        u32 OffsetX = 0;
-        u32 OffsetY = 0;
+		u32 MarginY = 8;
+        u32 OffsetX = MarginX;
+        u32 OffsetY = MarginY;
         u32 TargetWidth = SPRITEMAP_LAYER_WIDTH / 2;
         u32 TargetHeight = SPRITEMAP_LAYER_HEIGHT / 2;
         for (u32 i = 0; i < SPRITEMAP_COUNT; i++) {
@@ -1177,6 +1186,11 @@ internal void DebugSystem(debug_state *DebugState, game_state *State, window_par
             glBlitFramebuffer(0, 0, SPRITEMAP_LAYER_WIDTH, SPRITEMAP_LAYER_HEIGHT, OffsetX, OffsetY, OffsetX + TargetWidth, OffsetY + TargetHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
             OffsetX += TargetWidth + MarginX;
         }
+
+		OffsetX = MarginX;
+		OffsetY = TargetHeight + 2 * MarginY;
+		glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, State->Renderer.GlyphAtlas->Handle, 0);
+		glBlitFramebuffer(0, 0, MAX_GLYPH_PIXELS_X * GLYPH_ATLAS_COUNT_X, MAX_GLYPH_PIXELS_Y * GLYPH_ATLAS_COUNT_Y, OffsetX, OffsetY, OffsetX + TargetWidth, OffsetY + TargetHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
         glDeleteFramebuffers(1, &Framebuffer);
         glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);

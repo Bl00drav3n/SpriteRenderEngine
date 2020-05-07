@@ -277,15 +277,25 @@ internal audio_file CreateAudioFile(debug_game_audio *Audio)
 internal void LoadDebugFont(game_state *State, ascii_font *Font)
 {
 	render_state *Renderer =  &State->Renderer;
-	font *DebugFont = &State->DebugFont;
+	font *DebugFont = &State->Renderer.DebugFont;
 	DebugFont->Data = Font;
-	for(u32 GlyphIndex = 0; 
-		GlyphIndex < ArrayCount(DebugFont->GlyphTextures); 
+
+	u32 Stride = 4 * MAX_GLYPH_PIXELS_X * GLYPH_ATLAS_COUNT_X;
+	arena_push_params Params = DefaultArenaParams();
+	// TODO: Set/Unset flag
+	Params.Flags = Params.Flags & ~ArenaFlag_NoClear;
+	u8 * TexelData = push_array(&State->TransientArena, u8, Stride * MAX_GLYPH_PIXELS_Y * GLYPH_ATLAS_COUNT_Y, Params);
+
+	for(u32 GlyphIndex = 0;
+		GlyphIndex < ArrayCount(Font->Glyphs);
 		GlyphIndex++)
 	{
 		glyph *Glyph = Font->Glyphs + GlyphIndex;
-		u8 Pixels[4 * MAX_GLYPH_PIXELS_X * MAX_GLYPH_PIXELS_Y];
-		u8 *Dst = Pixels;
+		u32 TileX = GlyphIndex % GLYPH_ATLAS_COUNT_X;
+		u32 TileY = GlyphIndex / GLYPH_ATLAS_COUNT_Y;
+
+		u8 *Pixels = TexelData + Stride * (TileY * MAX_GLYPH_PIXELS_Y) + 4 * TileX * MAX_GLYPH_PIXELS_X;
+		u8 *Dst = Pixels + Stride * (MAX_GLYPH_PIXELS_Y - 1);
 		u8 *Src = Glyph->Bitmap;
 		for(s32 y = 0; y < Glyph->Height; y++) {
 			for(s32 x = 0; x < Glyph->Width; x++) {
@@ -297,14 +307,39 @@ internal void LoadDebugFont(game_state *State, ascii_font *Font)
 				f32 G32 = MapU8ToF32(G);
 				f32 B32 = MapU8ToF32(B);
 				f32 A32 = MapU8ToF32(A);
-				*Dst++ = MapF32ToU8(R32 * A32);
-				*Dst++ = MapF32ToU8(G32 * A32);
-				*Dst++ = MapF32ToU8(B32 * A32);
-				*Dst++ = A;
+				Dst[4 * x + 0] = MapF32ToU8(R32 * A32);
+				Dst[4 * x + 1] = MapF32ToU8(G32 * A32);
+				Dst[4 * x + 2] = MapF32ToU8(B32 * A32);
+				Dst[4 * x + 3] = MapF32ToU8(A32);
 			}
+			Dst -= Stride;
 		}
-		DebugFont->GlyphTextures[GlyphIndex] = CreateTexture(Renderer, Glyph->Width, Glyph->Height, Pixels);
+#if DEBUG_FONT_ENABLE_DEBUG_BORDER
+		for(s32 y = 0; y < MAX_GLYPH_PIXELS_Y; y++) {
+			Pixels[Stride * y + 0] = 0x00;
+			Pixels[Stride * y + 1] = 0xff;
+			Pixels[Stride * y + 2] = 0x00;
+			Pixels[Stride * y + 3] = 0xff;
+			
+			Pixels[Stride * y + 4 * (MAX_GLYPH_PIXELS_X - 1) + 0] = 0xff;
+			Pixels[Stride * y + 4 * (MAX_GLYPH_PIXELS_X - 1) + 1] = 0x00;
+			Pixels[Stride * y + 4 * (MAX_GLYPH_PIXELS_X - 1) + 2] = 0x00;
+			Pixels[Stride * y + 4 * (MAX_GLYPH_PIXELS_X - 1) + 3] = 0xff;
+		}
+		for(s32 x = 0; x < MAX_GLYPH_PIXELS_X; x++) {
+			Pixels[4 * x + 0] = 0x00;
+			Pixels[4 * x + 1] = 0xff;
+			Pixels[4 * x + 2] = 0x00;
+			Pixels[4 * x + 3] = 0xff;
+
+			Pixels[Stride * (MAX_GLYPH_PIXELS_Y - 1) + 4 * x + 0] = 0xff;
+			Pixels[Stride * (MAX_GLYPH_PIXELS_Y - 1) + 4 * x + 1] = 0x00;
+			Pixels[Stride * (MAX_GLYPH_PIXELS_Y - 1) + 4 * x + 2] = 0x00;
+			Pixels[Stride * (MAX_GLYPH_PIXELS_Y - 1) + 4 * x + 3] = 0xff;
+		}
+#endif
 	}
+	State->Renderer.GlyphAtlas = CreateTexture(Renderer, MAX_GLYPH_PIXELS_X * GLYPH_ATLAS_COUNT_X, MAX_GLYPH_PIXELS_Y * GLYPH_ATLAS_COUNT_Y, (u8*)TexelData);
 }
 
 #define MAX_METABALL_OBJECTS 32

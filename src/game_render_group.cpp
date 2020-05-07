@@ -116,42 +116,80 @@ internal inline void PushBlend(render_group *Group, b32 Enabled)
 	}
 }
 
-internal void PushGlyph(render_group *Group, font *Font, v2 P, u8 Codepoint)
+internal v2 PushText(render_group *Group, font *Font, char *Text, u32 Count, v2 P, v4 Color, u8 *LastCodepointInOut = 0)
 {
-	render_entry_glyph *Entry = PushRenderEntry(Group, render_entry_glyph);
-	if(Entry) {
-		glyph *Glyph = Font->Data->Glyphs + Codepoint;
-		v2 Origin = P + V2(Glyph->LeftSideBearing, -(f32)Glyph->OffsetY);
-		texture *Tex = Font->GlyphTextures[Codepoint];
-		v2 LowerLeftOffset = V2(0.5f / (f32)Tex->Width, 0.5f / (f32)Tex->Height);
-		v2 UpperRightOffset = V2(1.f, 1.f) - LowerLeftOffset;
+	v2 TextAt = P;
 
-		Entry->TextureHandle = Tex->Handle;
-		Entry->Corners[0].Position = V2(Origin.x, Origin.y);
-		Entry->Corners[1].Position = V2(Origin.x + Glyph->Width, Origin.y);
-		Entry->Corners[2].Position = V2(Origin.x, Origin.y - Glyph->Height);
-		Entry->Corners[3].Position = V2(Origin.x + Glyph->Width, Origin.y - Glyph->Height);
-		Entry->Corners[0].TexCoord = V2(LowerLeftOffset.x, LowerLeftOffset.y);
-		Entry->Corners[1].TexCoord = V2(UpperRightOffset.x, LowerLeftOffset.y);
-		Entry->Corners[2].TexCoord = V2(LowerLeftOffset.x, UpperRightOffset.y);
-		Entry->Corners[3].TexCoord = V2(UpperRightOffset.x, UpperRightOffset.y);
+	if(Text == 0 || Count == 0)
+		return TextAt;
+
+	render_entry_text *Entry = PushRenderEntry(Group, render_entry_text);
+	if(Entry) {
+		u32 Size = sizeof(glyph_vertex) * Count;
+		glyph_vertex *Vertices = (glyph_vertex*)PushRenderEntryData_(Group, Size);
+
+		Entry->NumCharacters = Vertices ? Count : 0;
+		Entry->Tint = Color;
+
+		Entry->DataHeader.Size = 0;
+		Entry->DataHeader.Offset = PointerDiff(Vertices, Entry);
+		if(Vertices) {
+			Entry->DataHeader.Size = Size;
+
+			u8 PrevCodepoint = 0;
+			if(LastCodepointInOut) {
+				PrevCodepoint = *LastCodepointInOut;
+			}
+
+			for(u32 i = 0; i < Count; i++) {
+				u8 Codepoint = Text[i];
+				if(Codepoint == '\n') {
+					TextAt = V2(P.x, TextAt.y - FontGetLineAdvance(Font->Data));
+				}
+				else {
+					if(Codepoint >= ASCII_GLYPH_COUNT) {
+						Codepoint = '_';
+					}
+
+					TextAt.x += FontGetKerning(Font->Data, Codepoint, PrevCodepoint);
+					glyph *Glyph = Font->Data->Glyphs + Codepoint;
+					Vertices[i].Position = TextAt + V2(Glyph->LeftSideBearing, 0);
+					Vertices[i].Index = Codepoint;
+		
+					TextAt.x += Glyph->AdvanceWidth;
+				}
+				PrevCodepoint = Codepoint;
+			}
+
+			if(LastCodepointInOut) {
+				*LastCodepointInOut = PrevCodepoint;
+			}
+		}
 	}
+
+	return TextAt;
 }
 
 internal void PushLines(render_group *Group, v2 *Points, u32 Count, f32 Width, render_entry_lines_mode Mode, v4 Color = V4(1.f, 1.f, 1.f, 1.f))
 {
-	if(Count == 0)
+	if(Points == 0 || Count == 0)
 		return;
 
 	render_entry_lines *Entry = PushRenderEntry(Group, render_entry_lines);
 	if(Entry) {
-		Entry->VertexCount = Count;
+		u32 Size = sizeof(*Points) * Count;
+		v2 *Positions = (v2*)PushRenderEntryData_(Group, Size);
+
+		Entry->VertexCount = Positions ? Count : 0;
 		Entry->Width = Width;
 		Entry->Color = Color;
 		Entry->Mode = Mode;
-
-		u32 Size = sizeof(*Points) * Count;
-		v2 *Positions = (v2*)PushRenderEntryData_(Group, Size);
-		CopyMemory(Positions, Points, Size);
+		
+		Entry->DataHeader.Size = 0;
+		Entry->DataHeader.Offset = PointerDiff(Positions, Entry);
+		if(Positions) {
+			Entry->DataHeader.Size = Size;
+			CopyMemory(Positions, Points, Size);
+		}
 	}
 }

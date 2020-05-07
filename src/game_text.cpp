@@ -30,6 +30,7 @@ internal text_extent GetTextExtent(font *Font, char *Text)
 	return Result;
 }
 
+/*
 internal v2 PushText(render_group *Group, font *Font, char *Text, v2 P, v4 Color, u8 *LastCodepointInOut = 0)
 {
     TIMED_FUNCTION();
@@ -63,6 +64,7 @@ internal v2 PushText(render_group *Group, font *Font, char *Text, v2 P, v4 Color
 
 	return TextAt;
 }
+*/
 
 internal v2 PushTextU32(render_group *Group, font *Font, u32 Value, v2 P, v4 Color, u8 *LastCodepointInOut)
 {
@@ -75,7 +77,33 @@ internal v2 PushTextU32(render_group *Group, font *Font, u32 Value, v2 P, v4 Col
 		Value /= 10;
 	} while(Value);
 
-	return PushText(Group, Font, At + 1, P, Color, LastCodepointInOut);
+	return PushText(Group, Font, At + 1, (u32)PointerDiff(Buffer + sizeof(Buffer) - 1, At), P, Color, LastCodepointInOut);
+}
+
+internal v2 PushTextS32(render_group *Group, font *Font, s32 Value, v2 P, v4 Color, u8 *LastCodepointInOut)
+{
+	s32 Sign;
+	if(Value >= 0) {
+		Sign = 1;
+	}
+	else {
+		Sign = -1;
+		Value = -Value;
+	}
+
+	char Buffer[16];
+	Buffer[15] = 0;
+	char *At = Buffer + sizeof(Buffer) - 2;
+	do {
+		Assert(At >= Buffer);
+		*At-- = (Value % 10) + '0';
+		Value /= 10;
+	} while(Value);
+	if(Sign == -1) {
+		*At-- = '-';
+	}
+
+	return PushText(Group, Font, At + 1, (u32)PointerDiff(Buffer + sizeof(Buffer) - 1, At), P, Color, LastCodepointInOut);
 }
 
 global_persist formatted_text * g_TextContext = 0;
@@ -297,42 +325,11 @@ internal v2 PushFormattedText(render_group *Group, font *Font, formatted_text *T
 				break;
 			case TextCmd_U32:
 			{
-				u32 Value = Cmd->U32;
-
-				char Buffer[16];
-				Buffer[15] = 0;
-				char *At = Buffer + sizeof(Buffer) - 2;
-				do {
-					Assert(At >= Buffer);
-					*At-- = (Value % 10) + '0';
-					Value /= 10;
-				} while(Value);
-				TextAt = PushText(Group, Font, At + 1, TextAt, Color, &PrevCodepoint);
+				TextAt = PushTextU32(Group, Font, Cmd->U32, TextAt, Color, &PrevCodepoint);
 			} break;
 			case TextCmd_S32:
 			{
-				s32 Sign;
-				s32 Value = Cmd->S32;
-				if(Value >= 0) {
-					Sign = 1;
-				}
-				else {
-					Sign = -1;
-					Value = -Value;
-				}
-
-				char Buffer[16];
-				Buffer[15] = 0;
-				char *At = Buffer + sizeof(Buffer) - 2;
-				do {
-					Assert(At >= Buffer);
-					*At-- = (Value % 10) + '0';
-					Value /= 10;
-				} while(Value);
-				if(Sign == -1) {
-					*At-- = '-';
-				}
-				TextAt = PushText(Group, Font, At + 1, TextAt, Color, &PrevCodepoint);
+				TextAt = PushTextS32(Group, Font, Cmd->S32, TextAt, Color, &PrevCodepoint);
 			} break;
 			case TextCmd_F32:
 			{
@@ -341,7 +338,7 @@ internal v2 PushFormattedText(render_group *Group, font *Font, formatted_text *T
 				NotImplemented;
 			} break;
 			case TextCmd_String:
-				TextAt = PushText(Group, Font, Cmd->String, TextAt, Color, &PrevCodepoint);
+				TextAt = PushText(Group, Font, Cmd->String, StrLen(Cmd->String), TextAt, Color, &PrevCodepoint);
 				break;
 			case TextCmd_Newline:
 				TextAt.x = Pos.x;

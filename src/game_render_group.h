@@ -8,7 +8,7 @@ struct render_group
 enum render_group_entry_type
 {
 	RenderGroupEntryType_render_entry_sprite,
-	RenderGroupEntryType_render_entry_glyph,
+	RenderGroupEntryType_render_entry_text,
 	RenderGroupEntryType_render_entry_lines,
 	RenderGroupEntryType_render_entry_rect,
 	RenderGroupEntryType_render_entry_rect_outline,
@@ -31,10 +31,18 @@ struct render_entry_sprite
     v4 TintColor;
 };
 
-struct render_entry_glyph
+struct render_entry_data_header
 {
-	u32 TextureHandle;
-	sprite_vertex Corners[4];
+	u32 Offset;
+	u32 Size;
+};
+
+struct render_entry_text
+{
+	render_entry_data_header DataHeader;
+
+	v4 Tint;
+	u32 NumCharacters;
 };
 
 enum render_entry_lines_mode
@@ -44,6 +52,8 @@ enum render_entry_lines_mode
 };
 struct render_entry_lines
 {
+	render_entry_data_header DataHeader;
+
 	f32 Width;
 	v4 Color;
 	render_entry_lines_mode Mode;

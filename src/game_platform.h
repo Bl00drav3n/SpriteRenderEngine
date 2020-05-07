@@ -26,6 +26,7 @@
 #define local_persist static
 #define internal static
 
+#define PointerDiff(A, B) (((u8*)A) - ((u8*)B))
 #define OffsetOf(Struct, Member) (umm)(&((Struct *)0)->Member)
 
 #include "string_util.h"
@@ -58,8 +59,10 @@ enum platform_cmd_type
 	PlatformCmdType_Cat,
 };
 
+#define PLATFORM_MEMORY_BLOCK_MAGIC 0xAABBCCDD
 struct platform_memory_block
 {
+	u32 Magic;
 	u8 * Base;
 	umm Size;
 	umm Used;

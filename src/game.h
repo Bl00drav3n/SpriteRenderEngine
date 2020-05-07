@@ -9,6 +9,9 @@
 
 #define LEVEL_FILE_MAGIC 0xFEA9
 
+#define GLYPH_ATLAS_COUNT_X 16
+#define GLYPH_ATLAS_COUNT_Y 16
+
 struct parametric_spline
 {
 	u32 Count;
@@ -164,12 +167,6 @@ struct sim_region
 	u32             DebugLoadedEntityCount;
 };
 
-struct font
-{
-	ascii_font * Data;
-	texture *    GlyphTextures[ASCII_GLYPH_COUNT];
-};
-
 struct weapon_list_item
 {
 	weapon *Weapon;
@@ -231,7 +228,6 @@ struct game_state
 
 	particle_cache *  ParticleCache;
 
-	font              DebugFont;
 	u32               DebugPlayerBlock;
 	u32               DebugHitCount;
 	parametric_spline DebugSpline;

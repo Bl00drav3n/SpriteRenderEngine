@@ -3,4 +3,6 @@
 
 #define GAME_DEBUG
 
+#define DEBUG_FONT_ENABLE_DEBUG_BORDER 0
+
 #endif
