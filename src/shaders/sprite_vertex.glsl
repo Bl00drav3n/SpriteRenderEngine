@@ -1,6 +1,6 @@
 #version 330
 
-in vec2 VertexPosition;
+in vec4 VertexPosition;
 in ivec3 VertexSpriteOffset;
 in vec4 VertexTint;
 
@@ -9,7 +9,7 @@ out vec4  SpriteTint;
 
 void main()
 {
-    gl_Position = vec4(VertexPosition, 0, 1);
+    gl_Position = VertexPosition;
     SpriteOffset = VertexSpriteOffset;
     SpriteTint = VertexTint;
 }

@@ -55,6 +55,17 @@ typedef ptrdiff_t GLintptr;
 #define GL_TEXTURE_2D_ARRAY               0x8C1A
 #define GL_TEXTURE_BUFFER                 0x8C2A
 
+#define GL_NEVER                          0x0200
+#define GL_LESS                           0x0201
+#define GL_EQUAL                          0x0202
+#define GL_LEQUAL                         0x0203
+#define GL_GREATER                        0x0204
+#define GL_NOTEQUAL                       0x0205
+#define GL_GEQUAL                         0x0206
+#define GL_ALWAYS                         0x0207
+
+#define GL_DEPTH_TEST                     0x0B71
+
 #define GL_CLAMP_TO_EDGE                  0x812F
 #define GL_BYTE                           0x1400
 #define GL_UNSIGNED_BYTE                  0x1401
@@ -268,6 +279,7 @@ GL_MACRO(glUnmapBuffer, GLboolean, GLenum target);
 GL_MACRO(glBindBuffer, void, GLenum target, GLuint buffer);
 GL_MACRO(glBindVertexArray, void, GLuint array);
 GL_MACRO(glViewport, void, GLint x, GLint y, GLsizei width, GLsizei height);
+GL_MACRO(glDepthFunc, void, GLenum func);
 GL_MACRO(glBlendFunc, void, GLenum sfactor, GLenum dfactor);
 GL_MACRO(glColor4f, void, GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
 GL_MACRO(glEnable, void, GLenum cap);

@@ -489,9 +489,9 @@ internal void SimulationTick(game_state *State, render_group *RenderGroup, sim_r
 			}
 		}
 
-		layer_id Layer = GET_LAYER(1);
+		layer_id Layer = GetLayer(LAYER_BACKGROUND);
 		if(Entity->Type == EntityType_Shield) {
-			Layer = GET_LAYER(0);
+			Layer = GetLayer(LAYER_FOREGROUND);
 		}
 
 		PushSprite(RenderGroup, Layer, Entity->NextPosition, &Entity->Sprite);

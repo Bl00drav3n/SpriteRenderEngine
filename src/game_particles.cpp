@@ -115,7 +115,7 @@ internal void UpdateAndRenderParticles(particle_cache *Cache, camera *Camera, f3
                         Particle->C.a = Lerp(Clamp(Particle->TimeToLive / System->ParticleLifetime, 0.f, 1.f), 0.f, 1.f);
                         Particle->C.g *= Sqrt(Particle->C.a);
 
-                        PushSprite(Group, GET_LAYER(0), Particle->P, &ExplosionSprite, Basis, Particle->C);
+                        PushSprite(Group, GetLayer(LAYER_BACKGROUND), Particle->P, &ExplosionSprite, Basis, Particle->C);
                     }
                 } break;
                 case ParticleSystemType_JetExhaust:
@@ -132,7 +132,7 @@ internal void UpdateAndRenderParticles(particle_cache *Cache, camera *Camera, f3
                         Color.a = t;
                         basis2d B = ScaleBasis(Basis, t, t);
 
-                        PushSprite(Group, GET_LAYER(0), Particle->P, &JetExhaustSprite, Basis, Particle->C);
+                        PushSprite(Group, GetLayer(LAYER_BACKGROUND), Particle->P, &JetExhaustSprite, Basis, Particle->C);
                     }
                 } break;
 

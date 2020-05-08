@@ -275,6 +275,12 @@ internal void RenderSprites(render_state *Renderer, spritemap_vertex *Vertices, 
 {   
 	TIMED_FUNCTION();
 
+	// TODO: Fix depth test
+#if 0
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_GEQUAL);
+#endif
+
 	opengl_state *State = (opengl_state*)Renderer->Backend.State;
 	GLuint VertexArray = State->SpriteVertexArray;
 	GLuint VertexBuffer = State->SpriteVertexBuffer;
@@ -326,6 +332,7 @@ internal void RenderSprites(render_state *Renderer, spritemap_vertex *Vertices, 
 #else
 	glDrawArrays(GL_POINTS, 0, VertexCount);
 #endif
+	glDisable(GL_DEPTH_TEST);
 	glUseProgram(0);
 	glBindVertexArray(0);
 }
@@ -361,7 +368,7 @@ internal void GfxInitializeRenderBackend(render_state *Renderer)
 	glBindBuffer(GL_ARRAY_BUFFER, State->SpriteVertexBuffer);
 	glBufferData(GL_ARRAY_BUFFER, MAX_NUM_SPRITE_VERTICES * sizeof(spritemap_vertex), 0, GL_STREAM_DRAW);
 	
-	glVertexAttribPointer(VertexAttrib_Position, 2, GL_FLOAT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Position));
+	glVertexAttribPointer(VertexAttrib_Position, 4, GL_FLOAT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Position));
 	glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Position].Id);
 	
 	glVertexAttribPointer(VertexAttrib_SpriteOffset, 3, GL_INT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Offset));
@@ -473,7 +480,13 @@ internal void GfxDrawRenderGroup(render_state *Renderer, render_group *Group)
 					TIMED_BLOCK("render_entry_sprite");
 					if (SpriteVertexCount < MAX_NUM_SPRITE_VERTICES) {
 						spritemap_vertex *Vertex = SpriteVertices + SpriteVertexCount++;
-						Vertex->Position = Entry->Center;
+						f32 OffsetZ = 0.f;
+						switch(Entry->Layer.Type) {
+						case LAYER_FOREGROUND: OffsetZ = 0.f;
+						case LAYER_BACKGROUND: OffsetZ = 1.f;
+						InvalidDefaultCase;
+						}
+						Vertex->Position = V4(Entry->Center.x, Entry->Center.y, OffsetZ, 1);
 						Vertex->Offset = Entry->Offset;
 						// TODO: Premultiply alpha here or in shader?
 						Vertex->Tint = PremultiplyAlpha(Entry->TintColor);

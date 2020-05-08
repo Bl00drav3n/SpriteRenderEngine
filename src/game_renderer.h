@@ -17,16 +17,22 @@ struct texture
 	texture *NextFree;
 };
 
-#define GET_LAYER(Id) U32ToLayerId(Id)
-struct layer_id
-{
-	u32 Id;
+enum layer_type {
+	LAYER_BACKGROUND,
+	LAYER_FOREGROUND,
+
+	LAYER_COUNT
 };
 
-static inline layer_id U32ToLayerId(u32 Id)
+struct layer_id
+{
+	layer_type Type;
+};
+
+static inline layer_id GetLayer(layer_type Type)
 {
 	layer_id Result;
-	Result.Id = Id;
+	Result.Type = Type;
 
 	return Result;
 }
@@ -93,7 +99,7 @@ struct glyph_vertex
 
 struct spritemap_vertex
 {
-    v2 Position;
+    v4 Position;
     spritemap_offset Offset;
     v4 Tint;
 };
