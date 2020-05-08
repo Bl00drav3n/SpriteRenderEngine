@@ -8,5 +8,5 @@ in vec4 Color;
 out vec4 FinalColor;
 void main()
 {
-	FinalColor = Color;// * texture(Tex, TexCoord);
+	FinalColor = Color * texture(Tex, TexCoord);
 }

@@ -5,6 +5,8 @@ struct render_group
 	u8 *BufferBase;
 };
 
+// TODO: Add fences/barriers to force flushes of certain draw buffers OR
+// TODO: Use Z-Buffer to handle sorting of drawables?
 enum render_group_entry_type
 {
 	RenderGroupEntryType_render_entry_sprite,

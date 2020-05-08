@@ -161,6 +161,7 @@ struct render_state
 	font DebugFont;
 	u32 GlyphDataHandle;
 	texture *GlyphAtlas;
+	texture *WhiteTexture;
 
 	basic_program BasicProgram;
 	line_program LineProgram;

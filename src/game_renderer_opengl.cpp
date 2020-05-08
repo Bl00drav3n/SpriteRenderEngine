@@ -2,16 +2,24 @@
 
 enum opengl_texture_unit_assignment {
 	TEXTURE_UNIT_SPRITEMAP,
+	TEXTURE_UNIT_RECT,
 	TEXTURE_UNIT_GLYPH_ATLAS,
 	TEXTURE_UNIT_GLYPH_DATA,
 };
 
 struct opengl_state {
+	// TODO: Bundle these into some object?
 	GLuint SpriteVertexArray;
 	GLuint SpriteVertexBuffer;
 
 	GLuint BasicVertexArray;
 	GLuint BasicVertexBuffer;
+	
+	GLuint GlyphVertexArray;
+	GLuint GlyphVertexBuffer;
+
+	GLuint LineVertexArray;
+	GLuint LineVertexBuffer;
 };
 
 enum vertex_attrib_id
@@ -108,9 +116,19 @@ internal texture * GfxCreateTexture(render_state *State, u32 Width, u32 Height, 
 }
 
 internal void GfxUpdateSpritemapSprite(spritemap_array *Spritemaps, u32 OffsetX, u32 OffsetY, u32 Index, sprite_pixel *Pixels) {
-    glBindTexture(GL_TEXTURE_2D_ARRAY, Spritemaps->TexId);
-	glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, OffsetX, OffsetY, Index, SPRITE_WIDTH, SPRITE_HEIGHT, 1, GL_RGBA, GL_UNSIGNED_BYTE, Pixels);
-	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+	if(Spritemaps) {
+		glBindTexture(GL_TEXTURE_2D_ARRAY, Spritemaps->TexId);
+		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, OffsetX, OffsetY, Index, SPRITE_WIDTH, SPRITE_HEIGHT, 1, GL_RGBA, GL_UNSIGNED_BYTE, Pixels);
+		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+	}
+}
+
+internal void BindTextureSafe(GLenum Target, texture *Tex) {
+	if(Tex) {
+		glBindTexture(Target, Tex->Handle);
+	} else {
+		glBindTexture(Target, 0);
+	}
 }
 
 internal GLuint CreateShader(char *src, GLenum Type)
@@ -193,7 +211,17 @@ internal basic_program GfxCreateBasicProgram(mem_arena *Memory)
 {    
 	basic_program Result;
 	char *ShaderSourceNames[3] = { "basic_vertex", 0, "basic_fragment" };
-    Result.Id = LoadProgram(Memory, ShaderSourceNames);
+    GLuint Program = LoadProgram(Memory, ShaderSourceNames);
+
+	glUseProgram(Program);
+
+	// TODO: Remove texturing from basic shader?
+	GLint TexLoc = glGetUniformLocation(Program, "Tex");
+	glUniform1i(TexLoc, TEXTURE_UNIT_RECT);
+
+	glUseProgram(0);
+
+	Result.Id = Program;
 
     return Result;
 }
@@ -220,7 +248,25 @@ internal text_program GfxCreateTextProgram(mem_arena *Memory)
 {
 	text_program Result;
 	char *ShaderSourceNames[3] = { "text_vertex", "text_geometry", "text_fragment" };
-    Result.Id = LoadProgram(Memory, ShaderSourceNames);
+    GLuint Program = LoadProgram(Memory, ShaderSourceNames);
+
+	glUseProgram(Program);
+
+	GLint GlyphAtlasSizeLoc = glGetUniformLocation(Program, "GlyphAtlasSize");
+	glUniform2i(GlyphAtlasSizeLoc, GLYPH_ATLAS_COUNT_X, GLYPH_ATLAS_COUNT_Y);
+					
+	GLint GlyphTileSizeLoc = glGetUniformLocation(Program, "GlyphTileSize");
+	glUniform2i(GlyphTileSizeLoc, MAX_GLYPH_PIXELS_X, MAX_GLYPH_PIXELS_Y);
+
+	GLint GlyphAtlasTexLoc = glGetUniformLocation(Program, "GlyphAtlasTex");
+	glUniform1i(GlyphAtlasTexLoc, TEXTURE_UNIT_GLYPH_ATLAS);
+
+	GLint GlyphDataBufferLoc = glGetUniformLocation(Program, "GlyphDataBuffer");
+	glUniform1i(GlyphDataBufferLoc, TEXTURE_UNIT_GLYPH_DATA);
+
+	glUseProgram(0);
+
+	Result.Id = Program;
 
     return Result;
 }
@@ -240,10 +286,13 @@ internal void RenderSprites(render_state *Renderer, spritemap_vertex *Vertices, 
 	sprite_program *SpriteProg = &Renderer->SpriteProgram;
 	glUseProgram(SpriteProg->Id);
 
-	u32 TexUnit = TEXTURE_UNIT_SPRITEMAP;
 	spritemap_array *Spritemaps = Renderer->Spritemaps;
-	glActiveTexture(GL_TEXTURE0 + TexUnit);
-	glBindTexture(GL_TEXTURE_2D_ARRAY, Spritemaps->TexId);
+	glActiveTexture(GL_TEXTURE0 + TEXTURE_UNIT_SPRITEMAP);
+	if(Spritemaps) {
+		glBindTexture(GL_TEXTURE_2D_ARRAY, Spritemaps->TexId);
+	} else {
+		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+	}
 
 	v2 SpriteHalfDim = V2(2.5f, 2.5f);
 	v2 SpriteTexDim = V2(1.f / (f32)SPRITEMAP_DIM_X, 1.f / (f32)SPRITEMAP_DIM_Y);
@@ -254,7 +303,7 @@ internal void RenderSprites(render_state *Renderer, spritemap_vertex *Vertices, 
 	GLint SpritemapsLoc = glGetUniformLocation(SpriteProg->Id, "Spritemaps");
 
 	// TODO: ProjectionTransform can happen anywhere in the pipeline. We might need to track it.
-	glUniform1i(SpritemapsLoc, TexUnit);
+	glUniform1i(SpritemapsLoc, TEXTURE_UNIT_SPRITEMAP);
 	glUniformMatrix4fv(ProjectionTransformLoc, 1, GL_FALSE, ProjectionTransform.ptr);
 	glUniform2fv(SpriteHalfDimLoc, 1, SpriteHalfDim.E);
 	glUniform2fv(SpriteTexDimLoc, 1, SpriteTexDim.E);
@@ -321,34 +370,47 @@ internal void GfxInitializeRenderBackend(render_state *Renderer)
 	glVertexAttribPointer(VertexAttrib_Tint, 4, GL_FLOAT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Tint));
 	glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Tint].Id);
 
+	// NOTE: Glyph
+	glGenVertexArrays(1, &State->GlyphVertexArray);
+	glGenBuffers(1, &State->GlyphVertexBuffer);
+	glBindVertexArray(State->GlyphVertexArray);
+	glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Position].Id);
+	glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Index].Id);
+
+	// NOTE: Line
+	glGenVertexArrays(1, &State->LineVertexArray);
+	glGenBuffers(1, &State->LineVertexBuffer);
+	glBindVertexArray(State->LineVertexArray);
+	glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Position].Id);
+
 	// NOTE: Spritemaps
 	{
 		spritemap_array *Map = push_type(&Renderer->Memory, spritemap_array);
 		GLuint TexId;
-		glGenTextures(1, &TexId);
-		if (TexId) {
-			u32 TextureWidth = SPRITEMAP_DIM_X * SPRITE_WIDTH;
-			u32 TextureHeight = SPRITEMAP_DIM_Y * SPRITE_HEIGHT;
+		if(Map) {
+			glGenTextures(1, &TexId);
+			if (TexId) {
+				u32 TextureWidth = SPRITEMAP_DIM_X * SPRITE_WIDTH;
+				u32 TextureHeight = SPRITEMAP_DIM_Y * SPRITE_HEIGHT;
 
-			glBindTexture(GL_TEXTURE_2D_ARRAY, TexId);
-			glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, TextureWidth, TextureHeight, SPRITEMAP_COUNT, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);  
-			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+				glBindTexture(GL_TEXTURE_2D_ARRAY, TexId);
+				glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGBA8, TextureWidth, TextureHeight, SPRITEMAP_COUNT, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+				glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_NEAREST);  
+				glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 
-			Map->TexId = TexId;
-			Map->TextureWidth = TextureWidth;
-			Map->TextureHeight = TextureHeight;
-			// TODO: Use a stub spritemap for release so we don't crash if we run out of resources (unlikely)?
-			Renderer->Spritemaps = Map;
+				Map->TexId = TexId;
+				Map->TextureWidth = TextureWidth;
+				Map->TextureHeight = TextureHeight;
+				// TODO: Use a stub spritemap for release so we don't crash if we run out of resources (unlikely)?
+			}
 		}
+		Renderer->Spritemaps = Map;
 	}
 
 	// NOTE: Glyph map
-
-
 	GLuint GlyphTBO, GlyphDataTexture;
 	glGenBuffers(1, &GlyphTBO);
 	glGenTextures(1, &GlyphDataTexture);
@@ -386,9 +448,10 @@ internal void GfxDrawRenderGroup(render_state *Renderer, render_group *Group)
     // TODO: We always use the last PushTransform call
 	// NOTE: This depends on the command right now.
     mat4 ProjectionTransform = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
+
     u32 SpriteVertexCount = 0;
     spritemap_vertex *SpriteVertices = 0;
-
+	
     TIMED_FUNCTION();
 	{ TIMED_BLOCK("Setup");
 
@@ -420,62 +483,38 @@ internal void GfxDrawRenderGroup(render_state *Renderer, render_group *Group)
 				BEGIN_CASE(render_entry_text)
 				{
 					TIMED_BLOCK("render_entry_text");
-					// TODO: Use a common vertex buffer
 					glyph_vertex *VertexBase = (glyph_vertex*)((u8*)Entry + Entry->DataHeader.Offset);
 					Offset += Entry->DataHeader.Size;
-
-					GLuint glyph_vao;
-					glGenVertexArrays(1, &glyph_vao);
-					glBindVertexArray(glyph_vao);
-
-					GLuint glyph_vbo;
-					glGenBuffers(1, &glyph_vbo);
-					glBindBuffer(GL_ARRAY_BUFFER, glyph_vbo);
-					glBufferData(GL_ARRAY_BUFFER, Entry->DataHeader.Size, VertexBase, GL_STATIC_DRAW);
-
-					GLuint pos_id = GlobalVertexAttribs[VertexAttrib_Position].Id;
-					glVertexAttribPointer(pos_id, 2, GL_FLOAT, GL_FALSE, sizeof(glyph_vertex), (void*)OffsetOf(glyph_vertex, Position));
-					glEnableVertexAttribArray(pos_id);
 					
-					GLuint idx_id = GlobalVertexAttribs[VertexAttrib_Index].Id;
-					glVertexAttribIPointer(idx_id, 1, GL_UNSIGNED_INT, sizeof(glyph_vertex), (void*)OffsetOf(glyph_vertex, Index));
-					glEnableVertexAttribArray(idx_id);
+					// TODO: Buffer text output and commit the whole vertex buffer at once to prevent calling gl functions like crazy
+					glBindVertexArray(State->GlyphVertexArray);
+					glBindBuffer(GL_ARRAY_BUFFER, State->GlyphVertexBuffer);
+					glBufferData(GL_ARRAY_BUFFER, Entry->DataHeader.Size, VertexBase, GL_STATIC_DRAW);
+					glVertexAttribPointer(GlobalVertexAttribs[VertexAttrib_Position].Id, 2, GL_FLOAT, GL_FALSE, sizeof(glyph_vertex), (void*)OffsetOf(glyph_vertex, Position));
+					glVertexAttribIPointer(GlobalVertexAttribs[VertexAttrib_Index].Id, 1, GL_UNSIGNED_INT, sizeof(glyph_vertex), (void*)OffsetOf(glyph_vertex, Index));
 					
 					GLuint TextProg = Renderer->TextProgram.Id;
 					glUseProgram(TextProg);
 
 					GLint ProjectionTransformLoc = glGetUniformLocation(TextProg, "ProjectionTransform");
 					glUniformMatrix4fv(ProjectionTransformLoc, 1, GL_FALSE, ProjectionTransform.ptr);
-					
-					GLint GlyphAtlasSizeLoc = glGetUniformLocation(TextProg, "GlyphAtlasSize");
-					glUniform2i(GlyphAtlasSizeLoc, GLYPH_ATLAS_COUNT_X, GLYPH_ATLAS_COUNT_Y);
-					
-					GLint GlyphTileSizeLoc = glGetUniformLocation(TextProg, "GlyphTileSize");
-					glUniform2i(GlyphTileSizeLoc, MAX_GLYPH_PIXELS_X, MAX_GLYPH_PIXELS_Y);
-					
-					glActiveTexture(GL_TEXTURE0 + TEXTURE_UNIT_GLYPH_ATLAS);
-					glBindTexture(GL_TEXTURE_2D, Renderer->GlyphAtlas->Handle);
-					GLint GlyphAtlasTexLoc = glGetUniformLocation(TextProg, "GlyphAtlasTex");
-					glUniform1i(GlyphAtlasTexLoc, TEXTURE_UNIT_GLYPH_ATLAS);
-					
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-					
-					glActiveTexture(GL_TEXTURE0 + TEXTURE_UNIT_GLYPH_DATA);
-					glBindTexture(GL_TEXTURE_BUFFER, Renderer->GlyphDataHandle);
-					GLint GlyphDataBufferLoc = glGetUniformLocation(TextProg, "GlyphDataBuffer");
-					glUniform1i(GlyphDataBufferLoc, TEXTURE_UNIT_GLYPH_DATA);
 
 					GLint TintLoc = glGetUniformLocation(TextProg, "GlyphColor");
 					glUniform4fv(TintLoc, 1, Entry->Tint.E);
+
+					glActiveTexture(GL_TEXTURE0 + TEXTURE_UNIT_GLYPH_ATLAS);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+					BindTextureSafe(GL_TEXTURE_2D, Renderer->GlyphAtlas);
+					
+					glActiveTexture(GL_TEXTURE0 + TEXTURE_UNIT_GLYPH_DATA);
+					glBindTexture(GL_TEXTURE_BUFFER, Renderer->GlyphDataHandle);
 
 					glDrawArrays(GL_POINTS, 0, Entry->NumCharacters);
 
 					glUseProgram(0);
 					glBindVertexArray(0);
 					glBindBuffer(GL_ARRAY_BUFFER, 0);
-					glDeleteBuffers(1, &glyph_vao);
-					glDeleteVertexArrays(1, &glyph_vbo);
 
 				} END_CASE_AND_BREAK;
 
@@ -486,18 +525,10 @@ internal void GfxDrawRenderGroup(render_state *Renderer, render_group *Group)
 					v2 *PositionBase = (v2*)((u8*)Entry + Entry->DataHeader.Offset);
 					Offset += Entry->DataHeader.Size;
 
-					GLuint line_vao;
-					glGenVertexArrays(1, &line_vao);
-					glBindVertexArray(line_vao);
-
-					GLuint line_vbo;
-					glGenBuffers(1, &line_vbo);
-					glBindBuffer(GL_ARRAY_BUFFER, line_vbo);
+					glBindVertexArray(State->LineVertexArray);
+					glBindBuffer(GL_ARRAY_BUFFER, State->LineVertexBuffer);
 					glBufferData(GL_ARRAY_BUFFER, Entry->DataHeader.Size, PositionBase, GL_STATIC_DRAW);
-
-					GLuint pos_id = GlobalVertexAttribs[VertexAttrib_Position].Id;
-					glVertexAttribPointer(pos_id, 2, GL_FLOAT, GL_FALSE, 0, 0);
-					glEnableVertexAttribArray(pos_id);
+					glVertexAttribPointer(GlobalVertexAttribs[VertexAttrib_Position].Id, 2, GL_FLOAT, GL_FALSE, 0, 0);
 				
 					GLuint LineProg = Renderer->LineProgram.Id;
 					glUseProgram(LineProg);
@@ -514,8 +545,6 @@ internal void GfxDrawRenderGroup(render_state *Renderer, render_group *Group)
 					glUseProgram(0);
 					glBindVertexArray(0);
 					glBindBuffer(GL_ARRAY_BUFFER, 0);
-					glDeleteBuffers(1, &line_vbo);
-					glDeleteVertexArrays(1, &line_vao);
 				} END_CASE_AND_BREAK;
 			
 				BEGIN_CASE(render_entry_rect)
@@ -544,10 +573,8 @@ internal void GfxDrawRenderGroup(render_state *Renderer, render_group *Group)
 					GLint ProjectionTransformLoc = glGetUniformLocation(Renderer->BasicProgram.Id, "ProjectionTransform");
 					glUniformMatrix4fv(ProjectionTransformLoc, 1, GL_FALSE, ProjectionTransform.ptr);
 				
-					// TODO: Load a white 1x1 texture OR remove texturing from basic shader!
-					GLint TexLoc = glGetUniformLocation(Renderer->BasicProgram.Id, "Tex");
-					GLint TexUnit = 1;
-					glUniform1i(TexLoc, TexUnit);
+					glActiveTexture(GL_TEXTURE0 + TEXTURE_UNIT_RECT);
+					BindTextureSafe(GL_TEXTURE_2D, Renderer->WhiteTexture);
 
 					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
@@ -582,10 +609,8 @@ internal void GfxDrawRenderGroup(render_state *Renderer, render_group *Group)
 					GLint ProjectionTransformLoc = glGetUniformLocation(Renderer->BasicProgram.Id, "ProjectionTransform");
 					glUniformMatrix4fv(ProjectionTransformLoc, 1, GL_FALSE, ProjectionTransform.ptr);
 				
-					// TODO: Load a white 1x1 texture OR remove texturing from basic shader!
-					GLint TexLoc = glGetUniformLocation(Renderer->BasicProgram.Id, "Tex");
-					GLint TexUnit = 1;
-					glUniform1i(TexLoc, TexUnit);
+					glActiveTexture(GL_TEXTURE0 + TEXTURE_UNIT_RECT);
+					BindTextureSafe(GL_TEXTURE_2D, Renderer->WhiteTexture);
 
 					glDrawArrays(GL_TRIANGLE_STRIP, 0, 10);
 
@@ -633,6 +658,7 @@ internal void GfxDrawRenderGroup(render_state *Renderer, render_group *Group)
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+		glBindTexture(GL_TEXTURE_BUFFER, 0);
 		glUseProgram(0);
 	}
 }

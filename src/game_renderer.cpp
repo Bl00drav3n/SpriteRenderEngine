@@ -31,6 +31,9 @@ internal void InitializeRenderer(render_state *Renderer)
 {
 	GfxInitializeRenderBackend(Renderer);
 	CreateTestSpritemaps(Renderer->Spritemaps);
+
+	u8 white[4] = { 0xff, 0xff, 0xff, 0xff };
+	Renderer->WhiteTexture = GfxCreateTexture(Renderer, 1, 1, white);
 }
 
 texture * AllocateTexture(render_state *State) {
