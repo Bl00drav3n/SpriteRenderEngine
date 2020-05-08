@@ -104,10 +104,27 @@ enum faction_type
 	FactionType_Collectible,
 };
 
+struct sprite
+{
+	sprite_type Type;
+	basis2d Basis;
+	v4 Tint;
+};
+
+internal inline sprite MakeSprite(sprite_type Type, v4 Tint = V4(1, 1, 1, 1))
+{
+	sprite Result = {};
+	Result.Type = Type;
+	Result.Basis = CanonicalBasis();
+	Result.Tint = Tint;
+
+	return Result;
+}
+
 struct projectile
 {
 	u32              Damage;
-	sprite_type      Sprite;
+	sprite           Sprite;
 	collision_volume Collision;
 };
 
@@ -129,9 +146,9 @@ struct weapon
 
 struct animated_object
 {
-	v2          Pos;
-	f32         RotSpeed;
-	sprite_type Sprite;
+	v2     Pos;
+	f32    RotSpeed;
+	sprite Sprite;
 };
 
 struct camera

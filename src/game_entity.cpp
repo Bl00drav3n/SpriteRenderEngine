@@ -265,7 +265,7 @@ internal void FireWeapon(game_state *State, sim_entity *Entity, v2 MuzzleP)
 			Projectile.Collision.Type = CollisionType_Sphere;
 			Projectile.Collision.Radius = 0.5f;
 			Projectile.Damage = 1;
-            Projectile.Sprite = SPRITE_PROJECTILE;
+            Projectile.Sprite = MakeSprite(SPRITE_PROJECTILE, V4(1, 1, 0, 1));
 			for(u32 i = 0; i < SpreadShotCount; i++) {
 				f32 Angle = AngleStart + i * dAngle;
 				v2 Dir = V2(Cos(Angle), Sin(Angle));
@@ -279,7 +279,7 @@ internal void FireWeapon(game_state *State, sim_entity *Entity, v2 MuzzleP)
 			Projectile.Collision.Type = CollisionType_Sphere;
 			Projectile.Collision.XYExtendFromOrigin = V2(0.5f, 0.5f);
 			Projectile.Damage = 1;
-            Projectile.Sprite = SPRITE_ENEMY_SINGLE_SHOT;
+            Projectile.Sprite = MakeSprite(SPRITE_PROJECTILE, V4(1, 0, 0, 1));
 			v2 LaunchVelocity = Weapon->LaunchSpeed * Weapon->MuzzleDir;
 		
 			SpawnProjectile(Level, Region, MuzzleP, LaunchVelocity, &Projectile, Entity);
@@ -290,7 +290,7 @@ internal void FireWeapon(game_state *State, sim_entity *Entity, v2 MuzzleP)
 			Projectile.Collision.Type = CollisionType_Sphere;
 			Projectile.Collision.Radius = 0.5f;
 			Projectile.Damage = 1;
-			Projectile.Sprite = SPRITE_FLOATER_SINGLE_SHOT;
+			Projectile.Sprite = MakeSprite(SPRITE_PROJECTILE, V4(0, 1, 0, 1));
 			v2 LaunchVelocity = Weapon->LaunchSpeed * Weapon->MuzzleDir;
 
 			SpawnProjectile(Level, Region, MuzzleP, LaunchVelocity, &Projectile, Entity);
@@ -447,7 +447,7 @@ internal void SpawnFloater(game_state *State, sim_region *Region, sim_entity *Re
 		Floater->Type = EntityType_Floater;
 		Floater->LastPosition = Ref->LastPosition + V2(0.f, 10.f);
 		Floater->Col = col;
-        Floater->Sprite = SPRITE_FLOATER;
+        Floater->Sprite = MakeSprite(SPRITE_FLOATER);
 		Floater->Owner = Ref->Id;
 		Floater->tParam = 0.f;
 		Floater->Faction = Ref->Faction;
@@ -470,7 +470,7 @@ internal stored_entity * SpawnFloater(game_state *State, stored_entity *Ref)
 		Floater->Position = Ref->Position;
 		Floater->Position.Offset += V2(0.f, 10.f);
 		Floater->Col = col;
-		Floater->Sprite = SPRITE_FLOATER;
+		Floater->Sprite = MakeSprite(SPRITE_FLOATER);
 		Floater->Owner = Ref->Id;
 		Floater->tParam = 0.f;
 		Floater->Faction = Ref->Faction;
@@ -499,7 +499,7 @@ internal entity_id SpawnEnemy(game_state *State, world_position P)
 		Enemy->Position = P;
 		Enemy->Col = col;
 		Enemy->Velocity = V2();
-		Enemy->Sprite = SPRITE_ENEMY;
+		Enemy->Sprite = MakeSprite(SPRITE_ENEMY);
 		Enemy->Faction = FactionType_Enemy;
 		Enemy->tParam = GetUniformRandom01(&State->Entropy);
 		Enemy->Health = 1;
@@ -532,7 +532,7 @@ internal void SpawnPlayer(game_state *State, sim_region *Region, v2 P)
 		Player->LastPosition = P;
 		Player->Speed = 60.f;
 		Player->Col = col;
-        Player->Sprite = SPRITE_PLAYER;
+        Player->Sprite = MakeSprite(SPRITE_PLAYER);
 		Player->Faction = FactionType_Player;
 		Player->Health = 16;
 		Player->Weapon = CreateWeapon(WeaponType_SpreadShot);
@@ -557,7 +557,7 @@ internal void SpawnShield(game_state *State, sim_region *Region, sim_entity *Own
 		Shield->Faction = Owner->Faction;
 		Shield->Owner = Owner->Id;
 		Shield->Health = 8;
-        Shield->Sprite = SPRITE_SHIELD;
+        Shield->Sprite = MakeSprite(SPRITE_SHIELD);
 		Shield->Tick = TickShield;
 	}
 }
@@ -571,7 +571,7 @@ internal void SpawnItem(game_state *State, sim_region *Region, v2 P, item_type T
 		Item->Faction = FactionType_Collectible;
 		Item->LastPosition = P;
 		Item->NextPosition = P;
-        Item->Sprite = SPRITE_ITEM;
+        Item->Sprite = MakeSprite(SPRITE_ITEM);
 		Item->Col = MakeSphereCollision(0.5f);
 		Item->Tick = TickItem;
 	}

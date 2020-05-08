@@ -494,7 +494,7 @@ internal void GfxDrawRenderGroup(render_state *Renderer, render_group *Group)
 						Vertex->Offset.Y = SpritemapIndex.OffsetY;
 						Vertex->Offset.Z = SpritemapIndex.Index;
 						// TODO: Premultiply alpha here or in shader?
-						//Vertex->Tint = PremultiplyAlpha(Entry->TintColor);
+						// NOTE: Probably do everything in the shader!
 						Vertex->Tint = Entry->TintColor;
 					}
 				} END_CASE_AND_BREAK;
@@ -653,8 +653,7 @@ internal void GfxDrawRenderGroup(render_state *Renderer, render_group *Group)
 
 				BEGIN_CASE(render_entry_blend)
 				{
-					// NOTE: We are always using premultiplied alpha
-					// DstColor = SrcColor + DstColor * (1 - SrcAlpha)
+					// TODO: Blend modes depend on the order of execution. Particle sprites want to use a different blend func!
 					if(Entry->BlendEnabled) {
 						glEnable(GL_BLEND);
 					}

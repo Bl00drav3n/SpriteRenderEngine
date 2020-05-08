@@ -494,7 +494,7 @@ internal void SimulationTick(game_state *State, render_group *RenderGroup, sim_r
 			Layer = GetLayer(LAYER_FOREGROUND);
 		}
 
-		PushSprite(RenderGroup, Layer, Entity->NextPosition, Entity->Sprite);
+		PushSprite(RenderGroup, Layer, Entity->NextPosition, Entity->Sprite.Type, Entity->Sprite.Basis, Entity->Sprite.Tint);
 	}
 
 #if 0
@@ -598,13 +598,9 @@ internal void RenderGame(render_state *Renderer, render_group *GameRenderGroup)
 	GfxDrawRenderGroup(Renderer, GameRenderGroup);
 }
 
+
 internal void CreateTestSpritemaps(mem_arena *Memory, spritemap_array *Spritemaps)
 {
-	image PlayerImage = LoadImageFromFile(Memory, "cirgreed");
-    image EnemyImage = LoadImageFromFile(Memory, "dancreep");
-    image FloaterImage = LoadImageFromFile(Memory, "hotpokket");
-	image JetExhaustImage = LoadImageFromFile(Memory, "jet_exhaust");
-
     rand_lcg_state Entropy = CreateRNG(0x38a923f4);
 	u32 Index = 0;
     for (u32 z = 0; z < SPRITEMAP_COUNT; z++) {
@@ -622,10 +618,25 @@ internal void CreateTestSpritemaps(mem_arena *Memory, spritemap_array *Spritemap
         }
     }
 	
-	GfxUpdateSpritemapSprite(Spritemaps, SPRITE_PLAYER, (sprite_pixel*)PlayerImage.Pixels);
-	GfxUpdateSpritemapSprite(Spritemaps, SPRITE_ENEMY, (sprite_pixel*)EnemyImage.Pixels);
-	GfxUpdateSpritemapSprite(Spritemaps, SPRITE_FLOATER, (sprite_pixel*)FloaterImage.Pixels);
-	GfxUpdateSpritemapSprite(Spritemaps, SPRITE_JET_EXHAUST, (sprite_pixel*)JetExhaustImage.Pixels);
+	struct test_sprite_binding {
+		sprite_type Type;
+		char *FileName;
+	};
+	test_sprite_binding Bindings[] = {
+		SPRITE_PLAYER, "cirgreed",
+		SPRITE_ENEMY, "dancreep",
+		SPRITE_FLOATER, "hotpokket",
+		SPRITE_JET_EXHAUST, "jet_exhaust",
+		SPRITE_PROJECTILE, "projectile", 
+		SPRITE_ENEMY_SINGLE_SHOT, "projectile",
+		SPRITE_FLOATER_SINGLE_SHOT, "projectile",
+	};
+	for(u32 i = 0; i < ARRAY_COUNT(Bindings); i++) {
+		temporary_memory Tmp = BeginTempMemory(Memory);
+		image Image = LoadImageFromFile(Memory, Bindings[i].FileName);
+		GfxUpdateSpritemapSprite(Spritemaps, Bindings[i].Type, (sprite_pixel*)Image.Pixels);
+		EndTempMemory(&Tmp);
+	}
 }
 
 extern "C" __declspec(dllexport) 
