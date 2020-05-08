@@ -339,7 +339,7 @@ internal void LoadDebugFont(game_state *State, ascii_font *Font)
 		}
 #endif
 	}
-	State->Renderer.GlyphAtlas = CreateTexture(Renderer, MAX_GLYPH_PIXELS_X * GLYPH_ATLAS_COUNT_X, MAX_GLYPH_PIXELS_Y * GLYPH_ATLAS_COUNT_Y, (u8*)TexelData);
+	State->Renderer.GlyphAtlas = GfxCreateTexture(Renderer, MAX_GLYPH_PIXELS_X * GLYPH_ATLAS_COUNT_X, MAX_GLYPH_PIXELS_Y * GLYPH_ATLAS_COUNT_Y, (u8*)TexelData);
 }
 
 #define MAX_METABALL_OBJECTS 32
@@ -595,7 +595,7 @@ internal void RenderGame(render_state *Renderer, render_group *GameRenderGroup)
 {
 	TIMED_FUNCTION();
 
-	DrawRenderGroup(Renderer, GameRenderGroup);
+	GfxDrawRenderGroup(Renderer, GameRenderGroup);
 
 }
 
@@ -611,7 +611,7 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 	
 	if(DllReloaded) {
 		GlobalStack = (stack*)GameMemory->StackMemory;
-		ReloadRenderBackend();
+		GfxReloadRenderBackend();
 		if(GlobalDebugState) {
 			DebugFreeAllFrames(GlobalDebugState);
 		}
@@ -772,7 +772,9 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 	}
 
 	// NOTE: Sound mixing
+#if DISABLE_SOUND_PROCESSING == 0
 	ProcessSound(State, GameMemory->AudioBuffer, &State->TransientArena, TimeStep);
+#endif
 	} // NOTE: TIMED_BLOCK("GameUpdateAndRender");
 	
 	if(GlobalDebugState) {

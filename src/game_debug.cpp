@@ -1166,9 +1166,10 @@ internal void DebugSystem(debug_state *DebugState, game_state *State, window_par
 		DebugConsole(&Group, &DebugState->Console, &State->Renderer.DebugFont, Window);
 	}
 
-	DrawRenderGroup(&State->Renderer, &Group);
+	GfxDrawRenderGroup(&State->Renderer, &Group);
 
     if (DebugState->DrawSpritemaps) {
+		// TODO: Have a way to make this platform independent (include in backend implementation)
         // TODO: Have a system to draw to framebuffers and stuff
         // TODO: Highlight topmost sprite the mouse is hovering over
         GLuint Framebuffer;

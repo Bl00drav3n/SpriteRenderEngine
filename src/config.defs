@@ -1,0 +1,7 @@
+#define GAME_DEBUG
+
+#define DISABLE_SOUND_PROCESSING 1
+
+#ifdef GAME_DEBUG
+#define DEBUG_FONT_ENABLE_DEBUG_BORDER 0
+#endif

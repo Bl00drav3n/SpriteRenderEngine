@@ -21,7 +21,7 @@ internal void CreateTestSpritemaps(spritemap_array *Spritemaps)
                 }
                 u32 OffsetX = x * SPRITE_WIDTH;
                 u32 OffsetY = y * SPRITE_HEIGHT;
-				UpdateSpritemapSprite(Spritemaps, OffsetX, OffsetY, z, pixels);
+				GfxUpdateSpritemapSprite(Spritemaps, OffsetX, OffsetY, z, pixels);
             }
         }
     }
@@ -29,7 +29,7 @@ internal void CreateTestSpritemaps(spritemap_array *Spritemaps)
 
 internal void InitializeRenderer(render_state *Renderer)
 {
-	InitializeRenderBackend(Renderer);
+	GfxInitializeRenderBackend(Renderer);
 	CreateTestSpritemaps(Renderer->Spritemaps);
 }
 
@@ -56,7 +56,7 @@ internal texture * LoadTextureFromFile(render_state *State, char *Filename)
 			stbi_set_flip_vertically_on_load(true);
 			u8 * ImageData = stbi_load_from_memory((u8*)FileData, File.Size, &Width, &Height, &Comp, 4);
 			if(ImageData) {
-				Result = CreateTexture(State, (u32)Width, (u32)Height, ImageData);
+				Result = GfxCreateTexture(State, (u32)Width, (u32)Height, ImageData);
 			}
 			else {
 				DebugConsolePushString((char*)stbi_failure_reason(), MSG_ERROR);
@@ -101,7 +101,7 @@ internal texture * CreateDebugTexture(render_state *State, v4 Color)
 		}
 	}
 	
-	return CreateTexture(State, ImageWidth, ImageHeight, ImageData);
+	return GfxCreateTexture(State, ImageWidth, ImageHeight, ImageData);
 }
 
 texture * CreateTiledDebugTexture(render_state *State)
@@ -145,7 +145,7 @@ texture * CreateTiledDebugTexture(render_state *State)
 		}
 	}
 
-	return CreateTexture(State, ImageWidth, ImageHeight, ImageData);
+	return GfxCreateTexture(State, ImageWidth, ImageHeight, ImageData);
 }
 
 sprite CreateSprite(s32 SpritePosX, s32 SpritePosY, s32 SpritemapIndex)

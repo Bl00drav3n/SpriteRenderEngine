@@ -39,7 +39,7 @@ global_persist vertex_attrib GlobalVertexAttribs[] = {
 	{ VertexAttrib_Index, "VertexIndex" },
 };
 
-void ReloadRenderBackend()
+void GfxReloadRenderBackend()
 {
 	// NOTE: Some tiny meta-preprocessing so we only need to add things once
 #define GL_MACRO(name, ...) name = (_##name*)Platform->LoadProcAddressGL(#name)
@@ -83,7 +83,7 @@ internal inline void SetDefaultGLState()
 #endif
 }
 
-internal texture * CreateTexture(render_state *State, u32 Width, u32 Height, u8 *Data)
+internal texture * GfxCreateTexture(render_state *State, u32 Width, u32 Height, u8 *Data)
 {
 	texture * Result = AllocateTexture(State);
 	if(Result) 
@@ -107,7 +107,7 @@ internal texture * CreateTexture(render_state *State, u32 Width, u32 Height, u8 
 	return Result;
 }
 
-internal void UpdateSpritemapSprite(spritemap_array *Spritemaps, u32 OffsetX, u32 OffsetY, u32 Index, sprite_pixel *Pixels) {
+internal void GfxUpdateSpritemapSprite(spritemap_array *Spritemaps, u32 OffsetX, u32 OffsetY, u32 Index, sprite_pixel *Pixels) {
     glBindTexture(GL_TEXTURE_2D_ARRAY, Spritemaps->TexId);
 	glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, OffsetX, OffsetY, Index, SPRITE_WIDTH, SPRITE_HEIGHT, 1, GL_RGBA, GL_UNSIGNED_BYTE, Pixels);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
@@ -189,7 +189,7 @@ internal GLuint LoadProgram(mem_arena *Memory, char *ShaderSourceNames[3]) {
 	return Result;
 }
 
-internal basic_program CreateBasicProgram(mem_arena *Memory)
+internal basic_program GfxCreateBasicProgram(mem_arena *Memory)
 {    
 	basic_program Result;
 	char *ShaderSourceNames[3] = { "basic_vertex", 0, "basic_fragment" };
@@ -198,7 +198,7 @@ internal basic_program CreateBasicProgram(mem_arena *Memory)
     return Result;
 }
 
-internal line_program CreateLineProgram(mem_arena *Memory)
+internal line_program GfxCreateLineProgram(mem_arena *Memory)
 {    
 	line_program Result;
 	char *ShaderSourceNames[3] = { "line_vertex", "line_geometry", "line_fragment" };
@@ -207,7 +207,7 @@ internal line_program CreateLineProgram(mem_arena *Memory)
     return Result;
 }
 
-internal sprite_program CreateSpriteProgram(mem_arena *Memory)
+internal sprite_program GfxCreateSpriteProgram(mem_arena *Memory)
 {
 	sprite_program Result;
 	char *ShaderSourceNames[3] = { "sprite_vertex", "sprite_geometry", "sprite_fragment" };
@@ -216,7 +216,7 @@ internal sprite_program CreateSpriteProgram(mem_arena *Memory)
     return Result;
 }
 
-internal text_program CreateTextProgram(mem_arena *Memory)
+internal text_program GfxCreateTextProgram(mem_arena *Memory)
 {
 	text_program Result;
 	char *ShaderSourceNames[3] = { "text_vertex", "text_geometry", "text_fragment" };
@@ -281,7 +281,7 @@ internal void RenderSprites(render_state *Renderer, spritemap_vertex *Vertices, 
 	glBindVertexArray(0);
 }
 
-internal void InitializeRenderBackend(render_state *Renderer)
+internal void GfxInitializeRenderBackend(render_state *Renderer)
 {
 	Assert(Renderer->Backend.State == 0);
 	opengl_state *State = push_type(&Renderer->Memory, opengl_state);
@@ -368,24 +368,17 @@ internal void InitializeRenderBackend(render_state *Renderer)
 	glBindTexture(GL_TEXTURE_BUFFER, 0);
 	glBindBuffer(GL_TEXTURE_BUFFER, 0);
 
-	// NOTE: Shaders
-	/*
-	Renderer->BasicProgram = CreateBasicProgram(Renderer->PerFrameMemory);
-	Renderer->LineProgram = CreateLineProgram(Renderer->PerFrameMemory);
-    Renderer->SpriteProgram = CreateSpriteProgram(Renderer->PerFrameMemory);
-	Renderer->TextProgram = CreateTextProgram(Renderer->PerFrameMemory);
-	*/
-	
-	Renderer->BasicProgram = CreateBasicProgram(&Renderer->Memory);
-	Renderer->LineProgram = CreateLineProgram(&Renderer->Memory);
-    Renderer->SpriteProgram = CreateSpriteProgram(&Renderer->Memory);
-	Renderer->TextProgram = CreateTextProgram(&Renderer->Memory);
+	// NOTE: Shaders	
+	Renderer->BasicProgram = GfxCreateBasicProgram(&Renderer->Memory);
+	Renderer->LineProgram = GfxCreateLineProgram(&Renderer->Memory);
+    Renderer->SpriteProgram = GfxCreateSpriteProgram(&Renderer->Memory);
+	Renderer->TextProgram = GfxCreateTextProgram(&Renderer->Memory);
 	
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 }
 
-internal void DrawRenderGroup(render_state *Renderer, render_group *Group)
+internal void GfxDrawRenderGroup(render_state *Renderer, render_group *Group)
 {
 	opengl_state *State = (opengl_state*)Renderer->Backend.State;
 	Assert(State != 0);
