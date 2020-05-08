@@ -300,6 +300,7 @@ GL_MACRO(glCreateProgram, GLuint, void);
 GL_MACRO(glLinkProgram, void, GLuint program);
 GL_MACRO(glUseProgram, void, GLuint program);
 GL_MACRO(glGetUniformLocation, GLint, GLuint program, const GLchar *name);
+GL_MACRO(glGetAttribLocation, GLint, GLuint program, const GLchar *name);
 GL_MACRO(glBindAttribLocation, void, GLuint program, GLuint index, const GLchar *name);
 GL_MACRO(glEnableVertexAttribArray, void, GLuint index);
 GL_MACRO(glDisableVertexAttribArray, void, GLuint index);

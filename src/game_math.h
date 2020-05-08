@@ -845,6 +845,16 @@ operator*(mat4 a, mat4 b)
     return result;
 }
 
+v4 Lerp(f32 t, const v4 &A, const v4 &B) {
+	v4 Result;
+	Result.x = Lerp(t, A.x, B.x);
+	Result.y = Lerp(t, A.y, B.y);
+	Result.z = Lerp(t, A.z, B.z);
+	Result.w = Lerp(t, A.w, B.w);
+
+	return Result;
+}
+
 /* === Utility === */
 
 struct line_segment

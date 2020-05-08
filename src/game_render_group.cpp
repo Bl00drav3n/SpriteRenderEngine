@@ -38,17 +38,15 @@ internal void * PushRenderEntryData_(render_group *Group, u32 Size)
 	return Result;
 }
 
-internal void PushSprite(render_group *Group, layer_id Layer, v2 Pos, sprite *Sprite, basis2d Basis = CanonicalBasis(), v4 TintColor = V4(1.f, 1.f, 1.f, 1.f))
+internal void PushSprite(render_group *Group, layer_id Layer, v2 Pos, sprite_type SpriteType, basis2d Basis = CanonicalBasis(), v4 TintColor = V4(1.f, 1.f, 1.f, 1.f))
 {
 	render_entry_sprite *Entry = PushRenderEntry(Group, render_entry_sprite);
 	if(Entry) {
         Entry->Basis = Basis;
 		Entry->Layer = Layer;
+		Entry->Type = SpriteType;
 		Entry->TintColor = TintColor;
         Entry->Center = Pos;
-        Entry->Offset.X = Sprite->SpritePosX * SPRITE_WIDTH;
-        Entry->Offset.Y = Sprite->SpritePosY * SPRITE_HEIGHT;
-        Entry->Offset.Z = Sprite->SpritemapIndex;
 	}
 }
 

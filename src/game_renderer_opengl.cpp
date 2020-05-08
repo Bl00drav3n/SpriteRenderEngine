@@ -115,10 +115,11 @@ internal texture * GfxCreateTexture(render_state *State, u32 Width, u32 Height, 
 	return Result;
 }
 
-internal void GfxUpdateSpritemapSprite(spritemap_array *Spritemaps, u32 OffsetX, u32 OffsetY, u32 Index, sprite_pixel *Pixels) {
+internal void GfxUpdateSpritemapSprite(spritemap_array *Spritemaps, u32 SpriteType, sprite_pixel *Pixels) {
 	if(Spritemaps) {
 		glBindTexture(GL_TEXTURE_2D_ARRAY, Spritemaps->TexId);
-		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, OffsetX, OffsetY, Index, SPRITE_WIDTH, SPRITE_HEIGHT, 1, GL_RGBA, GL_UNSIGNED_BYTE, Pixels);
+		spritemap_index Index = GetSpritemapIndexFromType(SpriteType);
+		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, Index.OffsetX * SPRITE_WIDTH, Index.OffsetY * SPRITE_HEIGHT, Index.Index, SPRITE_WIDTH, SPRITE_HEIGHT, 1, GL_RGBA, GL_UNSIGNED_BYTE, Pixels);
 		glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
 	}
 }
@@ -291,6 +292,7 @@ internal void RenderSprites(render_state *Renderer, spritemap_vertex *Vertices, 
 
 	sprite_program *SpriteProg = &Renderer->SpriteProgram;
 	glUseProgram(SpriteProg->Id);
+	
 
 	spritemap_array *Spritemaps = Renderer->Spritemaps;
 	glActiveTexture(GL_TEXTURE0 + TEXTURE_UNIT_SPRITEMAP);
@@ -323,7 +325,7 @@ internal void RenderSprites(render_state *Renderer, spritemap_vertex *Vertices, 
 	GLuint Query;
 	glGenQueries(1, &Query);
 	glBeginQuery(GL_PRIMITIVES_GENERATED, Query);
-	glDrawArrays(GL_POINTS, 0, SpriteVertexCount);
+	glDrawArrays(GL_POINTS, 0, VertexCount);
 	glEndQuery(GL_PRIMITIVES_GENERATED);
 
 	GLuint NumPrimitivesGenerated;
@@ -371,7 +373,7 @@ internal void GfxInitializeRenderBackend(render_state *Renderer)
 	glVertexAttribPointer(VertexAttrib_Position, 4, GL_FLOAT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Position));
 	glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_Position].Id);
 	
-	glVertexAttribPointer(VertexAttrib_SpriteOffset, 3, GL_INT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Offset));
+	glVertexAttribIPointer(VertexAttrib_SpriteOffset, 3, GL_INT, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Offset));
 	glEnableVertexAttribArray(GlobalVertexAttribs[VertexAttrib_SpriteOffset].Id);
 	
 	glVertexAttribPointer(VertexAttrib_Tint, 4, GL_FLOAT, GL_FALSE, sizeof(spritemap_vertex), (void*)offsetof(spritemap_vertex, Tint));
@@ -480,16 +482,20 @@ internal void GfxDrawRenderGroup(render_state *Renderer, render_group *Group)
 					TIMED_BLOCK("render_entry_sprite");
 					if (SpriteVertexCount < MAX_NUM_SPRITE_VERTICES) {
 						spritemap_vertex *Vertex = SpriteVertices + SpriteVertexCount++;
-						f32 OffsetZ = 0.f;
+						f32 DepthOffset= 0.f;
 						switch(Entry->Layer.Type) {
-						case LAYER_FOREGROUND: OffsetZ = 0.f;
-						case LAYER_BACKGROUND: OffsetZ = 1.f;
+						case LAYER_FOREGROUND: DepthOffset = 0.f; break;
+						case LAYER_BACKGROUND: DepthOffset = 1.f; break;
 						InvalidDefaultCase;
 						}
-						Vertex->Position = V4(Entry->Center.x, Entry->Center.y, OffsetZ, 1);
-						Vertex->Offset = Entry->Offset;
+						Vertex->Position = V4(Entry->Center.x, Entry->Center.y, DepthOffset, 1);
+						spritemap_index SpritemapIndex = GetSpritemapIndexFromType(Entry->Type);
+						Vertex->Offset.X = SpritemapIndex.OffsetX;
+						Vertex->Offset.Y = SpritemapIndex.OffsetY;
+						Vertex->Offset.Z = SpritemapIndex.Index;
 						// TODO: Premultiply alpha here or in shader?
-						Vertex->Tint = PremultiplyAlpha(Entry->TintColor);
+						//Vertex->Tint = PremultiplyAlpha(Entry->TintColor);
+						Vertex->Tint = Entry->TintColor;
 					}
 				} END_CASE_AND_BREAK;
 

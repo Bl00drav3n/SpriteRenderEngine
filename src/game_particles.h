@@ -25,8 +25,6 @@ struct particle
 #define MAX_PARTICLE_COUNT 1024
 struct particle_system
 {
-	sprite Sprite;
-
 	f32 ParticleLifetime;
 	u32 NextParticleIndex;
 	particle Particles[MAX_PARTICLE_COUNT];

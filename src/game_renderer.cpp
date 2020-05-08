@@ -1,3 +1,25 @@
+internal image LoadImageFromFile(mem_arena *Memory, char *Filename)
+{
+	image Result = {};
+	file_info File = Platform->OpenFile(Filename, FileType_Image);
+	if(File.Valid) {
+		void *FileData = PushSize(Memory, File.Size);
+		if(Platform->ReadEntireFile(&File, FileData)) {
+			stbi_set_flip_vertically_on_load(true);
+			Result.Pixels = stbi_load_from_memory((u8*)FileData, File.Size, &Result.Width, &Result.Height, &Result.Comp, 4);
+			if(Result.Pixels && Result.Comp == 4) {
+				Result.Valid = true;
+			}
+			else {
+				DebugConsolePushString((char*)stbi_failure_reason(), MSG_ERROR);
+			}
+		}
+	}
+	Platform->CloseFile(&File);
+
+	return Result;
+}
+
 internal void RandomSpriteColor(rand_lcg_state *Entropy, sprite_pixel *p)
 {
     p->r = MapF32ToU8(GetUniformRandom01(Entropy));
@@ -6,31 +28,9 @@ internal void RandomSpriteColor(rand_lcg_state *Entropy, sprite_pixel *p)
     p->a = 0xff;
 }
 
-internal void CreateTestSpritemaps(spritemap_array *Spritemaps)
-{
-    rand_lcg_state Entropy = CreateRNG(0x38a923f4);
-    for (u32 z = 0; z < SPRITEMAP_COUNT; z++) {
-        for (u32 y = 0; y < SPRITEMAP_DIM_Y; y++) {
-            for (u32 x = 0; x < SPRITEMAP_DIM_X; x++) {
-                sprite_pixel pixels[SPRITE_WIDTH * SPRITE_HEIGHT];
-                sprite_pixel pixel;
-                RandomSpriteColor(&Entropy, &pixel);
-                for (u32 i = 0; i < ArrayCount(pixels); i++) {
-                    sprite_pixel *p = pixels + i;
-                    *p = pixel;
-                }
-                u32 OffsetX = x * SPRITE_WIDTH;
-                u32 OffsetY = y * SPRITE_HEIGHT;
-				GfxUpdateSpritemapSprite(Spritemaps, OffsetX, OffsetY, z, pixels);
-            }
-        }
-    }
-}
-
 internal void InitializeRenderer(render_state *Renderer)
 {
 	GfxInitializeRenderBackend(Renderer);
-	CreateTestSpritemaps(Renderer->Spritemaps);
 
 	u8 white[4] = { 0xff, 0xff, 0xff, 0xff };
 	Renderer->WhiteTexture = GfxCreateTexture(Renderer, 1, 1, white);
@@ -48,25 +48,14 @@ texture * AllocateTexture(render_state *State) {
 	return Result;
 }
 
+
 internal texture * LoadTextureFromFile(render_state *State, char *Filename)
 {
 	texture *Result = 0;
-	file_info File = Platform->OpenFile(Filename, FileType_Image);
-	if(File.Valid) {
-		void *FileData = PushSize(State->PerFrameMemory, File.Size);
-		if(Platform->ReadEntireFile(&File, FileData)) {
-			int Width, Height, Comp;
-			stbi_set_flip_vertically_on_load(true);
-			u8 * ImageData = stbi_load_from_memory((u8*)FileData, File.Size, &Width, &Height, &Comp, 4);
-			if(ImageData) {
-				Result = GfxCreateTexture(State, (u32)Width, (u32)Height, ImageData);
-			}
-			else {
-				DebugConsolePushString((char*)stbi_failure_reason(), MSG_ERROR);
-			}
-		}
+	image Image = LoadImageFromFile(State->PerFrameMemory, Filename);
+	if(Image.Valid) {
+		Result = GfxCreateTexture(State, Image.Width, Image.Height, Image.Pixels);
 	}
-	Platform->CloseFile(&File);
 
 	return Result;
 }
@@ -149,20 +138,6 @@ texture * CreateTiledDebugTexture(render_state *State)
 	}
 
 	return GfxCreateTexture(State, ImageWidth, ImageHeight, ImageData);
-}
-
-sprite CreateSprite(s32 SpritePosX, s32 SpritePosY, s32 SpritemapIndex)
-{
-    Assert(SpritePosX < SPRITEMAP_DIM_X);
-    Assert(SpritePosY < SPRITEMAP_DIM_Y);
-    Assert(SpritemapIndex < SPRITEMAP_COUNT);
-
-	sprite Result;
-    Result.SpritePosX = SpritePosX;
-    Result.SpritePosY = SpritePosY;
-    Result.SpritemapIndex = SpritemapIndex;
-
-	return Result;
 }
 
 void LoadShaderSources(mem_arena *Memory, char *ShaderSourceNames[3], char *ShaderSources[3]) {

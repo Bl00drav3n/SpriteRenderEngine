@@ -41,7 +41,7 @@ struct sim_entity
 	entity_id        Owner;
 	entity_type      Type;
 	v2               Velocity;
-	sprite           Sprite;
+	sprite_type      Sprite;
 	collision_volume Col;
 	f32              Speed;
 	f32              tParam;
@@ -65,7 +65,7 @@ struct stored_entity
 	entity_type      Type;
 	entity_type      OwnerType;
 	v2               Velocity;
-	sprite           Sprite;
+	sprite_type      Sprite;
 	collision_volume Col;
 	f32              Speed;
 	f32              tParam;

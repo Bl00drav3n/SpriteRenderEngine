@@ -494,7 +494,7 @@ internal void SimulationTick(game_state *State, render_group *RenderGroup, sim_r
 			Layer = GetLayer(LAYER_FOREGROUND);
 		}
 
-		PushSprite(RenderGroup, Layer, Entity->NextPosition, &Entity->Sprite);
+		PushSprite(RenderGroup, Layer, Entity->NextPosition, Entity->Sprite);
 	}
 
 #if 0
@@ -596,7 +596,36 @@ internal void RenderGame(render_state *Renderer, render_group *GameRenderGroup)
 	TIMED_FUNCTION();
 
 	GfxDrawRenderGroup(Renderer, GameRenderGroup);
+}
 
+internal void CreateTestSpritemaps(mem_arena *Memory, spritemap_array *Spritemaps)
+{
+	image PlayerImage = LoadImageFromFile(Memory, "cirgreed");
+    image EnemyImage = LoadImageFromFile(Memory, "dancreep");
+    image FloaterImage = LoadImageFromFile(Memory, "hotpokket");
+	image JetExhaustImage = LoadImageFromFile(Memory, "jet_exhaust");
+
+    rand_lcg_state Entropy = CreateRNG(0x38a923f4);
+	u32 Index = 0;
+    for (u32 z = 0; z < SPRITEMAP_COUNT; z++) {
+        for (u32 y = 0; y < SPRITEMAP_DIM_Y; y++) {
+            for (u32 x = 0; x < SPRITEMAP_DIM_X; x++) {
+                sprite_pixel pixels[SPRITE_WIDTH * SPRITE_HEIGHT];
+                sprite_pixel pixel;
+                RandomSpriteColor(&Entropy, &pixel);
+                for (u32 i = 0; i < ArrayCount(pixels); i++) {
+                    sprite_pixel *p = pixels + i;
+                    *p = pixel;
+                }
+				GfxUpdateSpritemapSprite(Spritemaps, Index++, pixels);
+            }
+        }
+    }
+	
+	GfxUpdateSpritemapSprite(Spritemaps, SPRITE_PLAYER, (sprite_pixel*)PlayerImage.Pixels);
+	GfxUpdateSpritemapSprite(Spritemaps, SPRITE_ENEMY, (sprite_pixel*)EnemyImage.Pixels);
+	GfxUpdateSpritemapSprite(Spritemaps, SPRITE_FLOATER, (sprite_pixel*)FloaterImage.Pixels);
+	GfxUpdateSpritemapSprite(Spritemaps, SPRITE_JET_EXHAUST, (sprite_pixel*)JetExhaustImage.Pixels);
 }
 
 extern "C" __declspec(dllexport) 
@@ -630,15 +659,6 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 	{ TIMED_BLOCK("GameUpdateAndRender");
     if (!GameMemory->GameState) {
         GameMemory->GameState = State = InitializeGame(GameMemory->StackMemory, GameMemory->StackMemorySize);
-        State->TestTextures[0] = CreateDebugTexture(&State->Renderer, V4(1.f, 0.f, 1.f, 0.9f));
-        State->TestTextures[1] = CreateDebugTexture(&State->Renderer, V4(1.f, 0.f, 0.f, 0.9f));
-        State->TestTextures[2] = CreateDebugTexture(&State->Renderer, V4(0.f, 1.f, 0.f, 0.9f));
-        State->TestTextures[3] = CreateDebugTexture(&State->Renderer, V4(0.f, 0.f, 1.f, 0.9f));
-        State->TestTextures[4] = CreateDebugTexture(&State->Renderer, V4(1.f, 1.f, 1.f, 0.9f));
-        State->TestTextures[5] = CreateDebugTexture(&State->Renderer, V4(0.f, 1.f, 1.f, 0.9f));
-        State->TiledTestTexture = CreateTiledDebugTexture(&State->Renderer);
-        State->EnemyTexture = LoadTextureFromFile(&State->Renderer, "cirgreed");
-        State->FloaterTexture = LoadTextureFromFile(&State->Renderer, "hotpokket");
 
         // TODO: Remove
         State->Entropy = CreateRNG(Inputs->Seed);
@@ -664,6 +684,15 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         State->DebugHitCount = 0;
 
 		InitializeRenderer(&State->Renderer);
+        State->TestTextures[0] = CreateDebugTexture(&State->Renderer, V4(1.f, 0.f, 1.f, 0.9f));
+        State->TestTextures[1] = CreateDebugTexture(&State->Renderer, V4(1.f, 0.f, 0.f, 0.9f));
+        State->TestTextures[2] = CreateDebugTexture(&State->Renderer, V4(0.f, 1.f, 0.f, 0.9f));
+        State->TestTextures[3] = CreateDebugTexture(&State->Renderer, V4(0.f, 0.f, 1.f, 0.9f));
+        State->TestTextures[4] = CreateDebugTexture(&State->Renderer, V4(1.f, 1.f, 1.f, 0.9f));
+        State->TestTextures[5] = CreateDebugTexture(&State->Renderer, V4(0.f, 1.f, 1.f, 0.9f));
+        State->TiledTestTexture = CreateTiledDebugTexture(&State->Renderer);
+		CreateTestSpritemaps(State->Renderer.PerFrameMemory, State->Renderer.Spritemaps);
+
 		InitializeParticleCache(State->ParticleCache);
 		
 		State->Initialized = 1;

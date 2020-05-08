@@ -12,6 +12,23 @@
 #define GLYPH_ATLAS_COUNT_X 16
 #define GLYPH_ATLAS_COUNT_Y 16
 
+enum sprite_type {
+	SPRITE_INVALID,
+
+	SPRITE_PLAYER,
+	SPRITE_PROJECTILE,
+	SPRITE_ENEMY,
+	SPRITE_FLOATER,
+	SPRITE_SHIELD,
+	SPRITE_EXPLOSION,
+	SPRITE_JET_EXHAUST,
+	SPRITE_FLOATER_SINGLE_SHOT,
+	SPRITE_ENEMY_SINGLE_SHOT,
+	SPRITE_ITEM,
+
+	SPRITE_COUNT
+};
+
 struct parametric_spline
 {
 	u32 Count;
@@ -90,7 +107,7 @@ enum faction_type
 struct projectile
 {
 	u32              Damage;
-	sprite           Sprite;
+	sprite_type      Sprite;
 	collision_volume Collision;
 };
 
@@ -112,9 +129,9 @@ struct weapon
 
 struct animated_object
 {
-	v2     Pos;
-	f32    RotSpeed;
-	sprite Sprite;
+	v2          Pos;
+	f32         RotSpeed;
+	sprite_type Sprite;
 };
 
 struct camera
@@ -181,6 +198,8 @@ struct debug_point_buffer
 	v2 Points[4];
 };
 
+static_assert(SPRITE_COUNT < (SPRITEMAP_DIM_X * SPRITEMAP_DIM_Y * SPRITEMAP_COUNT), "SPRITE_COUNT must be less than total spritemap capacity");
+
 internal inline void PointBufferPushPoint(debug_point_buffer *Buffer, v2 P)
 {
 	if(Buffer->Count < ArrayCount(Buffer->Points)) {
@@ -200,8 +219,6 @@ struct game_state
 					  
 	texture *         TestTextures[6];
 	texture *         TiledTestTexture;
-	texture *         EnemyTexture;
-	texture *         FloaterTexture;
 					  	  
 	level             Level;
 	sim_region        SimRegion;

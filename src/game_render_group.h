@@ -28,7 +28,7 @@ struct render_entry_sprite
 {
     basis2d Basis;
     v2 Center;
-    spritemap_offset Offset;
+    u32 Type;
     layer_id Layer;
     v4 TintColor;
 };

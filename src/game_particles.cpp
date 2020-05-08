@@ -19,14 +19,12 @@ internal void InitializeParticleCache(particle_cache *Cache)
 				{
 					System->NextParticleIndex = 0;
 					System->ParticleLifetime = 0.5f;
-					System->Sprite = CreateSprite(0, 0, 0);
 				} break;
 
 				case ParticleSystemType_JetExhaust:
 				{
 					System->NextParticleIndex = 0;
 					System->ParticleLifetime = 0.25f;
-					System->Sprite = CreateSprite(0, 0, 0);
 				} break;
 
 				InvalidDefaultCase;
@@ -95,8 +93,6 @@ internal void UpdateAndRenderParticles(particle_cache *Cache, camera *Camera, f3
 	TIMED_FUNCTION();
 
     // TODO: Put this somewhere sane
-    sprite ExplosionSprite = CreateSprite(0, 1, 0);
-    sprite JetExhaustSprite = CreateSprite(1, 1, 0);
 	if(Cache) {
 		for(u32 i = 0; i < ParticleSystemType_Count; i++) {
 			particle_system *System = Cache->Systems + i;
@@ -115,24 +111,21 @@ internal void UpdateAndRenderParticles(particle_cache *Cache, camera *Camera, f3
                         Particle->C.a = Lerp(Clamp(Particle->TimeToLive / System->ParticleLifetime, 0.f, 1.f), 0.f, 1.f);
                         Particle->C.g *= Sqrt(Particle->C.a);
 
-                        PushSprite(Group, GetLayer(LAYER_BACKGROUND), Particle->P, &ExplosionSprite, Basis, Particle->C);
+                        PushSprite(Group, GetLayer(LAYER_BACKGROUND), Particle->P, SPRITE_EXPLOSION, Basis, Particle->C);
                     }
                 } break;
                 case ParticleSystemType_JetExhaust:
                 {
+					v4 EndColor = V4(0.4f, 0.2f, 0.f, 0.f);
                     for(u32 i = 0; i < MAX_PARTICLE_COUNT; i++) {
                         particle *Particle = System->Particles + i;
                         f32 t = Clamp(Particle->TimeToLive / System->ParticleLifetime, 0.f, 1.f);
                         Particle->P += (Particle->dP - Camera->Velocity) * dt;
                         Particle->TimeToLive -= dt;
-                        t *= t;
-                        v4 Color = Particle->C;
-                        Color.r = 1 - t;
-                        Color.g = t;
-                        Color.a = t;
+                        Particle->C = Lerp(Sqrt(t), EndColor, Particle->C);
                         basis2d B = ScaleBasis(Basis, t, t);
 
-                        PushSprite(Group, GetLayer(LAYER_BACKGROUND), Particle->P, &JetExhaustSprite, Basis, Particle->C);
+                        PushSprite(Group, GetLayer(LAYER_BACKGROUND), Particle->P, SPRITE_JET_EXHAUST, Basis, Particle->C);
                     }
                 } break;
 

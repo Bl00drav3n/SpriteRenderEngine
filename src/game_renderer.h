@@ -6,6 +6,14 @@
 
 struct render_group;
 
+struct image {
+	b32 Valid;
+	int Width;
+	int Height;
+	int Comp;
+	u8 *Pixels;
+};
+
 struct texture
 {
 	u32 Handle;
@@ -49,13 +57,6 @@ struct tex_coords
 {
 	v2 LowerLeft;
 	v2 UpperRight;
-};
-
-struct sprite
-{
-    s32 SpritePosX;
-    s32 SpritePosY;
-    s32 SpritemapIndex;
 };
 
 struct sprite_vertex
@@ -120,6 +121,22 @@ struct spritemap_array
     u32 TextureWidth;
     u32 TextureHeight;
 };
+
+struct spritemap_index {
+	u32 OffsetX;
+	u32 OffsetY;
+	u32 Index;
+};
+
+internal inline spritemap_index GetSpritemapIndexFromType(u32 SpriteType) {
+	spritemap_index Result = {};
+	Result.Index = SpriteType / (SPRITEMAP_DIM_X * SPRITEMAP_DIM_Y);
+	u32 LocalSpriteIndex = SpriteType - Result.Index * (SPRITEMAP_DIM_X * SPRITEMAP_DIM_Y);
+	Result.OffsetX = LocalSpriteIndex % SPRITEMAP_DIM_X;
+	Result.OffsetY = LocalSpriteIndex / SPRITEMAP_DIM_Y;
+	
+	return Result;
+}
 
 // TODO: Consolidate (save uniforms and vertex attribs, move to backend?)
 struct basic_program
