@@ -1204,8 +1204,17 @@ internal void DebugSystem(debug_state *DebugState, game_state *State, window_par
 }
 #else
 
-internal void DebugConsolePushString(char *Str, debug_msg_type Type)
-{
+internal void DebugConsolePushString(const char* Str, debug_msg_type Type) {
 }
+
+internal void DebugFreeAllFrames(debug_state* DebugState) {
+}
+
+internal void DebugSpline(render_group* Group, parametric_spline* S, f32 Width, u32 SamplePointsPerSegment) {
+}
+
+internal void DebugSystem(debug_state* DebugState, game_state* State, window_params* Window, game_inputs* Inputs, game_audio_buffer* AudioBuffer, mem_arena* TempMemory, u8* ConsoleBuffer, umm ConsoleBufferSize) {
+}
+
 
 #endif

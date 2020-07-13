@@ -116,7 +116,8 @@ internal texture * GfxCreateTexture(render_state *State, u32 Width, u32 Height, 
 }
 
 internal void GfxUpdateSpritemapSprite(spritemap_array *Spritemaps, u32 SpriteType, sprite_pixel *Pixels) {
-	if(Spritemaps) {
+	Assert(Spritemaps && Pixels);
+	if(Spritemaps && Pixels) {
 		glBindTexture(GL_TEXTURE_2D_ARRAY, Spritemaps->TexId);
 		spritemap_index Index = GetSpritemapIndexFromType(SpriteType);
 		glTexSubImage3D(GL_TEXTURE_2D_ARRAY, 0, Index.OffsetX * SPRITE_WIDTH, Index.OffsetY * SPRITE_HEIGHT, Index.Index, SPRITE_WIDTH, SPRITE_HEIGHT, 1, GL_RGBA, GL_UNSIGNED_BYTE, Pixels);
@@ -460,7 +461,7 @@ internal void GfxDrawRenderGroup(render_state *Renderer, render_group *Group)
 
     u32 SpriteVertexCount = 0;
     spritemap_vertex *SpriteVertices = 0;
-	
+
     TIMED_FUNCTION();
 	{ TIMED_BLOCK("Setup");
 

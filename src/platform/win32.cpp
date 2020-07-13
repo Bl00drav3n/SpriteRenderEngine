@@ -406,7 +406,6 @@ LPSTR lpCmdLine, int nCmdShow)
 	wglSwapBuffers = (_wglSwapBuffers*)Win32GetProcAddressGL("wglSwapBuffers");
 	glFinish = (_glFinish*)Win32GetProcAddressGL("glFinish");
 
-	LARGE_INTEGER LastCounter;
 	LARGE_INTEGER CPUFreq;
 	QueryPerformanceFrequency(&CPUFreq);
 
@@ -429,6 +428,7 @@ LPSTR lpCmdLine, int nCmdShow)
 	
 #ifdef GAME_DEBUG
 	{ // NOTE: Quick measurement of rdtsc cycle frequency
+		LARGE_INTEGER LastCounter;
 		LARGE_INTEGER CurCounter;
 		QueryPerformanceCounter(&LastCounter);
 		u64 BeginCycles = GetCycleCount();
@@ -440,9 +440,6 @@ LPSTR lpCmdLine, int nCmdShow)
 		f32 MeasuredTime = (f32)(CurCounter.QuadPart - LastCounter.QuadPart) / (f32)CPUFreq.QuadPart;
 		GlobalCyclesPerSecond = (f32)(EndCycles - BeginCycles) / MeasuredTime;
 	}
-#else
-	Memory.DebugMemory = 0;
-	Memory.DebugMemorySize = 0;
 #endif
 
 	game_audio_buffer AudioBuffer = {};

@@ -297,8 +297,9 @@ internal void LoadDebugFont(game_state *State, ascii_font *Font)
 		u8 *Pixels = TexelData + Stride * (TileY * MAX_GLYPH_PIXELS_Y) + 4 * TileX * MAX_GLYPH_PIXELS_X;
 		u8 *Dst = Pixels + Stride * (MAX_GLYPH_PIXELS_Y - 1);
 		u8 *Src = Glyph->Bitmap;
-		for(s32 y = 0; y < Glyph->Height; y++) {
-			for(s32 x = 0; x < Glyph->Width; x++) {
+		// NOTE: Assumes that the glyph is somewhere inside the bounding box, starting at (OffsetX, OffsetY)
+		for(s32 y = 0; y < MAX_GLYPH_PIXELS_Y; y++) {
+			for(s32 x = 0; x < MAX_GLYPH_PIXELS_X; x++) {
 				u8 R = *Src++;
 				u8 G = *Src++;
 				u8 B = *Src++;
@@ -617,7 +618,7 @@ internal void CreateTestSpritemaps(mem_arena *Memory, spritemap_array *Spritemap
             }
         }
     }
-	
+
 	struct test_sprite_binding {
 		sprite_type Type;
 		char *FileName;
@@ -634,7 +635,9 @@ internal void CreateTestSpritemaps(mem_arena *Memory, spritemap_array *Spritemap
 	for(u32 i = 0; i < ARRAY_COUNT(Bindings); i++) {
 		temporary_memory Tmp = BeginTempMemory(Memory);
 		image Image = LoadImageFromFile(Memory, Bindings[i].FileName);
-		GfxUpdateSpritemapSprite(Spritemaps, Bindings[i].Type, (sprite_pixel*)Image.Pixels);
+		if (Image.Valid) {
+			GfxUpdateSpritemapSprite(Spritemaps, Bindings[i].Type, (sprite_pixel*)Image.Pixels);
+		}
 		EndTempMemory(&Tmp);
 	}
 }
@@ -702,6 +705,7 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
         State->TestTextures[4] = CreateDebugTexture(&State->Renderer, V4(1.f, 1.f, 1.f, 0.9f));
         State->TestTextures[5] = CreateDebugTexture(&State->Renderer, V4(0.f, 1.f, 1.f, 0.9f));
         State->TiledTestTexture = CreateTiledDebugTexture(&State->Renderer);
+
 		CreateTestSpritemaps(State->Renderer.PerFrameMemory, State->Renderer.Spritemaps);
 
 		InitializeParticleCache(State->ParticleCache);

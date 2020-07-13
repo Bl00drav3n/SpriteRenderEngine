@@ -259,6 +259,7 @@ typedef void (APIENTRY *GLDEBUGPROCARB)(GLenum source, GLenum type, GLuint id, G
 
 #endif // #ifndef GL_MACRO
 
+GL_MACRO(glGetError, GLenum, void);
 GL_MACRO(glTexParameteri, void, GLenum target, GLenum pname, GLint param);
 GL_MACRO(glTexImage2D, void, GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid * data);
 GL_MACRO(glTexImage3D, void, GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid * data);

@@ -68,9 +68,9 @@ internal v2 PushText(render_group *Group, font *Font, char *Text, v2 P, v4 Color
 
 internal v2 PushTextU32(render_group *Group, font *Font, u32 Value, v2 P, v4 Color, u8 *LastCodepointInOut)
 {
-	char Buffer[16];
+	char Buffer[16] = {};
 	Buffer[15] = 0;
-	char *At = Buffer + sizeof(Buffer) - 2;
+	char *At = Buffer + sizeof(Buffer) - 1;
 	do {
 		Assert(At >= Buffer);
 		*At-- = (Value % 10) + '0';
@@ -93,7 +93,7 @@ internal v2 PushTextS32(render_group *Group, font *Font, s32 Value, v2 P, v4 Col
 
 	char Buffer[16];
 	Buffer[15] = 0;
-	char *At = Buffer + sizeof(Buffer) - 2;
+	char *At = Buffer + sizeof(Buffer) - 1;
 	do {
 		Assert(At >= Buffer);
 		*At-- = (Value % 10) + '0';
