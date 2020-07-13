@@ -41,3 +41,4 @@
 rundir/data
 build/
 ipch/
+.vs/
