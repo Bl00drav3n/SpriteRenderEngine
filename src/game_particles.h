@@ -15,18 +15,20 @@ enum particle_system_type
 struct particle
 {
 	f32 TimeToLive;
-
+	basis2d Basis;
 	v2 P;
 	v2 dP;
 	v2 ddP;
 	v4 C;
 };
 
+enum sprite_type;
 #define MAX_PARTICLE_COUNT 1024
 struct particle_system
 {
 	f32 ParticleLifetime;
 	u32 NextParticleIndex;
+	sprite_type Sprite;
 	particle Particles[MAX_PARTICLE_COUNT];
 };
 

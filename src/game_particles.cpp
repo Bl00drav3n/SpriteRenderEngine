@@ -19,12 +19,14 @@ internal void InitializeParticleCache(particle_cache *Cache)
 				{
 					System->NextParticleIndex = 0;
 					System->ParticleLifetime = 0.5f;
+					System->Sprite = SPRITE_EXPLOSION;
 				} break;
 
 				case ParticleSystemType_JetExhaust:
 				{
 					System->NextParticleIndex = 0;
 					System->ParticleLifetime = 0.25f;
+					System->Sprite= SPRITE_JET_EXHAUST;
 				} break;
 
 				InvalidDefaultCase;
@@ -87,6 +89,21 @@ internal void SpawnExplosion(particle_cache *Cache, v2 P, f32 MeanSpeed)
 	}
 }
 
+internal void RenderParticles(particle_cache* Cache, camera* Camera, render_group* Group) {
+	TIMED_FUNCTION();
+
+	// TODO: Put this somewhere sane
+	if (Cache) {
+		for (u32 i = 0; i < ParticleSystemType_Count; i++) {
+			particle_system* System = Cache->Systems + i;
+			for (u32 i = 0; i < MAX_PARTICLE_COUNT; i++) {
+				particle* Particle = System->Particles + i;
+				PushSprite(Group, GetLayer(LAYER_BACKGROUND), Particle->P, System->Sprite, Particle->Basis, Particle->C);
+			}
+		}
+	}
+}
+
 // TODO: Do we really want to pass the camera down, or is there a better approach?
 internal void UpdateAndRenderParticles(particle_cache *Cache, camera *Camera, f32 dt, render_group *Group)
 {
@@ -94,6 +111,7 @@ internal void UpdateAndRenderParticles(particle_cache *Cache, camera *Camera, f3
 
     // TODO: Put this somewhere sane
 	if(Cache) {
+		TIMED_BLOCK("UpdateParticles");
 		for(u32 i = 0; i < ParticleSystemType_Count; i++) {
 			particle_system *System = Cache->Systems + i;
 
@@ -110,8 +128,7 @@ internal void UpdateAndRenderParticles(particle_cache *Cache, camera *Camera, f3
                         Particle->TimeToLive -= dt;
                         Particle->C.a = Lerp(Clamp(Particle->TimeToLive / System->ParticleLifetime, 0.f, 1.f), 0.f, 1.f);
                         Particle->C.g *= Sqrt(Particle->C.a);
-
-                        PushSprite(Group, GetLayer(LAYER_BACKGROUND), Particle->P, SPRITE_EXPLOSION, Basis, Particle->C);
+						Particle->Basis = Basis;
                     }
                 } break;
                 case ParticleSystemType_JetExhaust:
@@ -123,9 +140,7 @@ internal void UpdateAndRenderParticles(particle_cache *Cache, camera *Camera, f3
                         Particle->P += (Particle->dP - Camera->Velocity) * dt;
                         Particle->TimeToLive -= dt;
                         Particle->C = Lerp(Sqrt(t), EndColor, Particle->C);
-                        basis2d B = ScaleBasis(Basis, t, t);
-
-                        PushSprite(Group, GetLayer(LAYER_BACKGROUND), Particle->P, SPRITE_JET_EXHAUST, Basis, Particle->C);
+                        Particle->Basis = ScaleBasis(Basis, t, t);
                     }
                 } break;
 
@@ -133,40 +148,5 @@ internal void UpdateAndRenderParticles(particle_cache *Cache, camera *Camera, f3
             }
 		}
 	}
-}
-
-// TODO: Properly split into Update and Render?
-internal void RenderParticles(particle_cache* Cache, camera* Camera, render_group* Group) {
-	TIMED_FUNCTION();
-
-	// TODO: Put this somewhere sane
-	if (Cache) {
-		for (u32 i = 0; i < ParticleSystemType_Count; i++) {
-			particle_system* System = Cache->Systems + i;
-
-			f32 ParticleSize = 1.f;
-			basis2d Basis = ParticleSize * CanonicalBasis();
-			switch (i) {
-			case ParticleSystemType_Explosion:
-			{
-				for (u32 i = 0; i < MAX_PARTICLE_COUNT; i++) {
-					particle* Particle = System->Particles + i;
-					PushSprite(Group, GetLayer(LAYER_BACKGROUND), Particle->P, SPRITE_EXPLOSION, Basis, Particle->C);
-				}
-			} break;
-			case ParticleSystemType_JetExhaust:
-			{
-				for (u32 i = 0; i < MAX_PARTICLE_COUNT; i++) {
-					particle* Particle = System->Particles + i;
-					f32 t = Clamp(Particle->TimeToLive / System->ParticleLifetime, 0.f, 1.f);
-					basis2d B = ScaleBasis(Basis, t, t);
-
-					PushSprite(Group, GetLayer(LAYER_BACKGROUND), Particle->P, SPRITE_JET_EXHAUST, Basis, Particle->C);
-				}
-			} break;
-
-			InvalidDefaultCase;
-			}
-		}
-	}
+	RenderParticles(Cache, Camera, Group);
 }
