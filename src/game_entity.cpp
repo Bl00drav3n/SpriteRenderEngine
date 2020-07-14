@@ -330,7 +330,7 @@ internal ENTITY_TICK_DISPATCH(TickPlayer)
 #if 1
 	SpawnJetExhaust(State->ParticleCache, Entity->LastPosition, V2(-1.f, 0.f), 15.f, 4.f, 150.f);
 #endif
-	Entity->Velocity = Camera->Velocity + Velocity;
+	Entity->Velocity = /*Camera->Velocity + */Velocity;
 
 	// TODO: Pull out into own function?
 	weapon *Weapon = &Entity->Weapon;
