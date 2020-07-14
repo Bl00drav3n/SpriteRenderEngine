@@ -515,6 +515,9 @@ internal GAME_INPUT_BUTTON GetButton(WPARAM wParam)
         case VK_F5:
             Button = BUTTON_DEBUG_TOGGLE_SPRITES;
             break;
+		case 'N':
+			Button = BUTTON_DEBUG_SINGLE_STEP;
+			break;
     }
 
     return Button;

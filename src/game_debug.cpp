@@ -287,6 +287,7 @@ enum debug_cmd_type
 	CMD_TYPE_TEST,
 	CMD_TYPE_SYSTEM,
 	CMD_TYPE_RELOAD_LEVEL,
+	CMD_TYPE_SINGLE_STEP,
 
 	CMD_TYPE_COUNT
 };
@@ -310,6 +311,7 @@ global_persist debug_command DebugCommands[] = {
 	{ CMD_TYPE_CLOSE, "close" },
 	{ CMD_TYPE_SYSTEM, "sys" },
 	{ CMD_TYPE_RELOAD_LEVEL, "reload" },
+	{ CMD_TYPE_SINGLE_STEP, "step" },
 };
 
 internal void CmdLineExecute(debug_console *Console)
@@ -429,6 +431,10 @@ internal void CmdLineExecute(debug_console *Console)
 			{
 				State->ReloadLevel = true;
 				break;
+			}
+			case CMD_TYPE_SINGLE_STEP:
+			{
+				TOGGLE(State->SingleStepSimulation); break;
 			}
 			default: 
 				DebugConsolePushString("Command not implemented");

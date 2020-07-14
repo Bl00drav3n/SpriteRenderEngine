@@ -171,6 +171,7 @@ struct debug_state
     b32 DrawSpritemaps;
 	b32 ReloadLevel;
     b32 MuteAudio;
+	b32 SingleStepSimulation;
 };
 
 internal inline u64 GetCycleCount()

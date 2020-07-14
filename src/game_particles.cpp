@@ -134,3 +134,39 @@ internal void UpdateAndRenderParticles(particle_cache *Cache, camera *Camera, f3
 		}
 	}
 }
+
+// TODO: Properly split into Update and Render?
+internal void RenderParticles(particle_cache* Cache, camera* Camera, render_group* Group) {
+	TIMED_FUNCTION();
+
+	// TODO: Put this somewhere sane
+	if (Cache) {
+		for (u32 i = 0; i < ParticleSystemType_Count; i++) {
+			particle_system* System = Cache->Systems + i;
+
+			f32 ParticleSize = 1.f;
+			basis2d Basis = ParticleSize * CanonicalBasis();
+			switch (i) {
+			case ParticleSystemType_Explosion:
+			{
+				for (u32 i = 0; i < MAX_PARTICLE_COUNT; i++) {
+					particle* Particle = System->Particles + i;
+					PushSprite(Group, GetLayer(LAYER_BACKGROUND), Particle->P, SPRITE_EXPLOSION, Basis, Particle->C);
+				}
+			} break;
+			case ParticleSystemType_JetExhaust:
+			{
+				for (u32 i = 0; i < MAX_PARTICLE_COUNT; i++) {
+					particle* Particle = System->Particles + i;
+					f32 t = Clamp(Particle->TimeToLive / System->ParticleLifetime, 0.f, 1.f);
+					basis2d B = ScaleBasis(Basis, t, t);
+
+					PushSprite(Group, GetLayer(LAYER_BACKGROUND), Particle->P, SPRITE_JET_EXHAUST, Basis, Particle->C);
+				}
+			} break;
+
+			InvalidDefaultCase;
+			}
+		}
+	}
+}

@@ -361,9 +361,17 @@ internal void SimulationTick(game_state *State, render_group *RenderGroup, sim_r
 {
 	TIMED_FUNCTION();
 
-	particle_cache *ParticleCache = State->ParticleCache;
 	level *Level = &State->Level;
 	camera *Camera = &Level->Camera;
+	particle_cache *ParticleCache = State->ParticleCache;
+
+	Camera->P.Offset = Camera->P.Offset + Camera->Speed * TimeDelta * V2(1.f, 0.f);
+	RecanonicalizeWorldPosition(&State->Level, &Camera->P);
+	if (Camera->P.BlockIndex == State->Level.AllocatedBlockCount - 1 && Camera->P.Offset.x >= 0.f) {
+		Camera->Speed = 0.f;
+		Camera->P.Offset.x = 0.f;
+		Camera->Velocity = V2();
+	}
 
 	// TODO: Properly seperate update and rendering?
 	for(sim_entity_item *ListItem = SimRegion->EntityListSentry.Next;
@@ -524,8 +532,6 @@ internal void SimulationTick(game_state *State, render_group *RenderGroup, sim_r
 		InvalidCodepath;
 	}
 #endif
-
-	UpdateAndRenderParticles(ParticleCache, Camera, TimeDelta, RenderGroup);
 }
 
 internal void CreateTestLevel(game_state *State)
@@ -736,17 +742,6 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 	PushClear(&GameRenderGroup, ClearColor);
 	PushBlend(&GameRenderGroup, true);
 	PushTransformation(&GameRenderGroup, Viewport, CreateViewProjection(V2(), State->Level.Camera.Bounds));
-	
-	camera *Camera = &State->Level.Camera;
-	Camera->P.Offset = Camera->P.Offset + Camera->Speed * TimeStep * V2(1.f, 0.f);
-	RecanonicalizeWorldPosition(&State->Level, &Camera->P);
-	if(Camera->P.BlockIndex == State->Level.AllocatedBlockCount - 1 && Camera->P.Offset.x >= 0.f) {
-		Camera->Speed = 0.f;
-		Camera->P.Offset.x = 0.f;
-		Camera->Velocity = V2();
-	}
-
-	v2 CursorP = Screen01ToViewSpace(Camera, V2(Inputs->MouseX, Inputs->MouseY));
 #if 0
 	if(!Inputs->State[BUTTON_MOUSE_LEFT] && Inputs->HalfTransitionCount[BUTTON_MOUSE_LEFT]) {
 		PushSplinePoint(&State->DebugSpline, CursorP);
@@ -756,9 +751,31 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 	}
 #endif
 
-	f32 TimeDelta = TimeStep;
+	b32 ShouldStepSimulation = true;
+	if (GlobalDebugState && GlobalDebugState->SingleStepSimulation) {
+		ShouldStepSimulation = Inputs->State[BUTTON_DEBUG_SINGLE_STEP] && Inputs->HalfTransitionCount[BUTTON_DEBUG_SINGLE_STEP] > 0;
+	}
+
 	BeginSimRegion(State);
-	SimulationTick(State, &GameRenderGroup, &State->SimRegion, Inputs, TimeDelta);
+	if (ShouldStepSimulation) {
+		SimulationTick(State, &GameRenderGroup, &State->SimRegion, Inputs, TimeStep);
+		UpdateAndRenderParticles(State->ParticleCache, &State->Level.Camera, TimeStep, &GameRenderGroup);
+	}
+	else {
+		TIMED_BLOCK("FastSimulation");
+		for (sim_entity_item* ListItem = State->SimRegion.EntityListSentry.Next;
+			ListItem;
+			ListItem = ListItem->Next)
+		{
+			layer_id Layer = GetLayer(LAYER_BACKGROUND);
+			if (ListItem->Entity->Type == EntityType_Shield) {
+				Layer = GetLayer(LAYER_FOREGROUND);
+			}
+
+			PushSprite(&GameRenderGroup, Layer, ListItem->Entity->LastPosition, ListItem->Entity->Sprite.Type, ListItem->Entity->Sprite.Basis, ListItem->Entity->Sprite.Tint);
+		}
+		RenderParticles(State->ParticleCache, &State->Level.Camera, &GameRenderGroup);
+	}
 	// NOTE: Add player if reference lost
 	sim_entity *Player = GetSimEntityById(&State->SimRegion, State->PlayerRef);
 	if(!Player) {
@@ -783,6 +800,7 @@ GAME_UPDATE_AND_RENDER(GameUpdateAndRender)
 
 	DebugSpline(&GameRenderGroup, &State->DebugSpline, 0.1f, 25);
 
+	v2 CursorP = Screen01ToViewSpace(&State->Level.Camera, V2(Inputs->MouseX, Inputs->MouseY));
 	debug_point_buffer *PointBuffer = &State->DebugPointBuffer;
 	if(Inputs->State[BUTTON_MOUSE_LEFT] && Inputs->HalfTransitionCount[BUTTON_MOUSE_LEFT]) {
 		PointBufferPushPoint(PointBuffer, CursorP);
